@@ -15,6 +15,8 @@ Summary:        Automates deployment of containerized applications
 License:        ASL 2.0
 
 Patch0:     remove-vendored-tar.patch
+Patch1:     docker-0.11-remove-subscription-dependency.patch
+
 URL:            http://www.docker.io
 # only x86_64 for now: https://github.com/dotcloud/docker/issues/136
 ExclusiveArch:  x86_64
@@ -65,6 +67,8 @@ servers, OpenStack clusters, public instances, or combinations of the above.
 %setup -q -n docker-%{commit}
 rm -rf vendor
 %patch0 -p1 -b remove-vendored-tar
+%patch1 -p1 -b remove-subscription-dependency
+
 tar zxf %{SOURCE2} 
 
 %build
@@ -127,10 +131,10 @@ install -p -m 644 %{SOURCE1} %{buildroot}%{_unitdir}
 install -d %{buildroot}%{_sysconfdir}/sysconfig/
 install -p -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/sysconfig/docker
 
-# install secrets dir
-install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
-ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+# don't install secrets dir
+# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+# ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
 %pre
 getent group docker > /dev/null || %{_sbindir}/groupadd -r docker
@@ -152,10 +156,10 @@ exit 0
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_bindir}/docker
-%dir %{_datadir}/rhel
-%dir %{_datadir}/rhel/secrets
-%{_datadir}/rhel/secrets/etc-pki-entitlement
-%{_datadir}/rhel/secrets/rhel7.repo
+#%dir %{_datadir}/rhel
+#%dir %{_datadir}/rhel/secrets
+#%{_datadir}/rhel/secrets/etc-pki-entitlement
+#%{_datadir}/rhel/secrets/rhel7.repo
 %dir %{_libexecdir}/docker
 %{_libexecdir}/docker/dockerinit
 %{_unitdir}/docker.service
