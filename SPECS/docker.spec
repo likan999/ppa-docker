@@ -10,13 +10,11 @@
 
 Name:           docker
 Version:        0.11.1
-Release:        19%{?dist}
+Release:        22%{?dist}
 Summary:        Automates deployment of containerized applications
 License:        ASL 2.0
 
 Patch0:     remove-vendored-tar.patch
-Patch1:     docker-0.11-remove-subscription-dependency.patch
-
 URL:            http://www.docker.io
 # only x86_64 for now: https://github.com/dotcloud/docker/issues/136
 ExclusiveArch:  x86_64
@@ -25,8 +23,10 @@ Source0:        https://github.com/lsm5/docker/archive/%{commit}/docker-%{shortc
 # though final name for sysconf/sysvinit files is simply 'docker',
 # having .sysvinit and .sysconfig makes things clear
 Source1:        docker.service
-Source2:        docker-man.tar.gz
+Source2:        docker-man-1.tar.gz
 Source3:        docker.sysconfig
+# Resolves: rhbz#1111760 - CVE-2014-3499
+Source4:        docker.socket
 BuildRequires:  gcc
 BuildRequires:  glibc-static
 # ensure build uses golang 1.2-7 and above
@@ -65,8 +65,6 @@ servers, OpenStack clusters, public instances, or combinations of the above.
 %setup -q -n docker-%{commit}
 rm -rf vendor
 %patch0 -p1 -b remove-vendored-tar
-%patch1 -p1 -b remove-subscription-dependency
-
 tar zxf %{SOURCE2} 
 
 %build
@@ -124,15 +122,15 @@ install -d -m 700 %{buildroot}%{_sharedstatedir}/docker
 # install systemd/init scripts
 install -d %{buildroot}%{_unitdir}
 install -p -m 644 %{SOURCE1} %{buildroot}%{_unitdir}
-install -p -m 644 contrib/init/systemd/socket-activation/docker.socket %{buildroot}%{_unitdir}
+#install -p -m 644 %{SOURCE4} %{buildroot}%{_unitdir}
 # for additional args
 install -d %{buildroot}%{_sysconfdir}/sysconfig/
 install -p -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/sysconfig/docker
 
-# don't install secrets dir
-# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
-# ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-# ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+# install secrets dir
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
 %pre
 getent group docker > /dev/null || %{_sbindir}/groupadd -r docker
@@ -154,14 +152,14 @@ exit 0
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_bindir}/docker
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
 %dir %{_libexecdir}/docker
 %{_libexecdir}/docker/dockerinit
 %{_unitdir}/docker.service
-%{_unitdir}/docker.socket
+#%{_unitdir}/docker.socket
 %{_sysconfdir}/sysconfig/docker
 %dir %{_sysconfdir}/bash_completion.d
 %{_sysconfdir}/bash_completion.d/docker.bash
@@ -177,8 +175,12 @@ exit 0
 %{_datadir}/vim/vimfiles/syntax/dockerfile.vim
 
 %changelog
-* Thu Jun 26 2014 Jim Perrin <jperrin@centos.org> - 0.11.1-19.el7.centos
-- Remove subscription sharing between host and container
+* Thu Jun 26 2014 Dan Walsh <dwalsh@redhat.com> - 0.11.1-22
+- Resolves: rhbz#1111760 - CVE-2014-3499
+- Remove docker.socket unit file until docker-1.0
+
+* Tue Jun 24 2014 Lokesh Mandvekar <lsm5@fedoraproject.org> - 0.11.1-20
+- Resolves: rhbz#1111760 - CVE-2014-3499
 
 * Fri Jun 06 2014 Lokesh Mandvekar <lsm5@redhat.com> - 0.11.1-19
 - build with golang-github-kr-pty-0-0.19.git98c7b80.el7
