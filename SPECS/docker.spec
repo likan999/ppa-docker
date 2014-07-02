@@ -179,6 +179,10 @@ exit 0
 %{_datadir}/vim/vimfiles/syntax/dockerfile.vim
 
 %changelog
+* Wed Jul  2 2014 Johnny Hughes <johnny@centos.org> - 0.11.1-22.el7.centos
+- Roll in CentOS Branding
+- Remove subscription dependency for docker operation 
+
 * Thu Jun 26 2014 Dan Walsh <dwalsh@redhat.com> - 0.11.1-22
 - Resolves: rhbz#1111760 - CVE-2014-3499
 - Remove docker.socket unit file until docker-1.0
