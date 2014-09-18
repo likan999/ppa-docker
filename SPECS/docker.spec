@@ -5,49 +5,43 @@
 %global debug_package %{nil}
 %global gopath  %{_datadir}/gocode
 
-%global commit      02d20af7db1e154290eb5128525dd6831bd4c014
+%global commit   d84a070e476ce923dd03e28232564a87704613ab
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 Name:           docker
-Version:        0.11.1
-Release:        22%{?dist}
+Version:        1.1.2
+Release:        13%{?dist}
 Summary:        Automates deployment of containerized applications
 License:        ASL 2.0
 
-Patch0:     remove-vendored-tar.patch
-Patch1:     docker-0.11-remove-subscription-dependency.patch
-
 URL:            http://www.docker.io
-# only x86_64 for now: https://github.com/dotcloud/docker/issues/136
 ExclusiveArch:  x86_64
-#use branch: https://github.com/lsm5/docker/commits/2014-06-06-2
-Source0:        https://github.com/lsm5/docker/archive/%{commit}/docker-%{shortcommit}.tar.gz
+Source0:        https://github.com/rhatdan/docker/archive/%{commit}/docker-%{shortcommit}.tar.gz
+Patch1: docker-Super-minimal-host-based-secrets.patch
 # though final name for sysconf/sysvinit files is simply 'docker',
 # having .sysvinit and .sysconfig makes things clear
 Source1:        docker.service
-Source2:        docker-man-1.tar.gz
+Source2:        docker-man-3.tar.gz
 Source3:        docker.sysconfig
-# Resolves: rhbz#1111760 - CVE-2014-3499
+# docker: systemd socket activation results in privilege escalation
 Source4:        docker.socket
 BuildRequires:  gcc
 BuildRequires:  glibc-static
 # ensure build uses golang 1.2-7 and above
 # http://code.google.com/p/go/source/detail?r=a15f344a9efa35ef168c8feaa92a15a1cdc93db5
 BuildRequires:  golang >= 1.2-7
-BuildRequires:  golang(github.com/gorilla/mux)
-BuildRequires:  golang(github.com/kr/pty)
+BuildRequires:  golang(github.com/gorilla/mux) >= 0-0.12
+BuildRequires:  golang(github.com/kr/pty) >= 0-0.20
 BuildRequires:  golang(code.google.com/p/go.net/websocket)
 BuildRequires:  golang(code.google.com/p/gosqlite/sqlite3)
-BuildRequires:  golang(github.com/syndtr/gocapability/capability)
+BuildRequires:  golang(github.com/syndtr/gocapability/capability) >= 0-0.6
 BuildRequires:  golang(github.com/godbus/dbus)
-BuildRequires:  golang(github.com/coreos/go-systemd/activation)
+BuildRequires:  golang(github.com/coreos/go-systemd/activation) >= 2-2
 BuildRequires:  device-mapper-devel
-# btrfs not available for rhel yet
 BuildRequires:  btrfs-progs-devel
 BuildRequires:  pkgconfig(systemd)
 Requires:       systemd-units
 # need xz to work with ubuntu images
-# https://bugzilla.redhat.com/show_bug.cgi?id=1045220
 Requires:       xz
 
 Provides:       lxc-docker = %{version}
@@ -65,10 +59,7 @@ servers, OpenStack clusters, public instances, or combinations of the above.
 
 %prep
 %setup -q -n docker-%{commit}
-rm -rf vendor
-%patch0 -p1 -b remove-vendored-tar
-%patch1 -p1 -b remove-subscription-dependency
-
+%patch1 -p1 -b .secrets
 tar zxf %{SOURCE2} 
 
 %build
@@ -81,7 +72,7 @@ popd
 
 export DOCKER_GITCOMMIT="%{shortcommit}/%{version}"
 export DOCKER_BUILDTAGS='selinux'
-export GOPATH=$(pwd)/_build:%{gopath}
+export GOPATH=$(pwd)/_build:$(pwd)/vendor
 
 hack/make.sh dynbinary
 cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
@@ -90,11 +81,11 @@ cp contrib/syntax/vim/README.md README-vim-syntax.md
 %install
 # install binary
 install -d %{buildroot}%{_bindir}
-install -p -m 755 bundles/%{version}-dev/dynbinary/docker-%{version}-dev %{buildroot}%{_bindir}/docker
+install -p -m 755 bundles/%{version}/dynbinary/docker-%{version} %{buildroot}%{_bindir}/docker
 
 # install dockerinit
 install -d %{buildroot}%{_libexecdir}/docker
-install -p -m 755 bundles/%{version}-dev/dynbinary/dockerinit-%{version}-dev %{buildroot}%{_libexecdir}/docker/dockerinit
+install -p -m 755 bundles/%{version}/dynbinary/dockerinit-%{version} %{buildroot}%{_libexecdir}/docker/dockerinit
 
 # install manpages
 install -d %{buildroot}%{_mandir}/man1
@@ -103,8 +94,8 @@ install -d %{buildroot}%{_mandir}/man5
 install -p -m 644 man5/* %{buildroot}%{_mandir}/man5
 
 # install bash completion
-install -d %{buildroot}%{_sysconfdir}/bash_completion.d
-install -p -m 644 contrib/completion/bash/docker %{buildroot}%{_sysconfdir}/bash_completion.d/docker.bash
+install -d %{buildroot}%{_datadir}/bash-completion/completions/
+install -p -m 644 contrib/completion/bash/docker %{buildroot}%{_datadir}/bash-completion/completions/
 
 # install zsh completion
 install -d %{buildroot}%{_datadir}/zsh/site-functions
@@ -126,15 +117,17 @@ install -d -m 700 %{buildroot}%{_sharedstatedir}/docker
 # install systemd/init scripts
 install -d %{buildroot}%{_unitdir}
 install -p -m 644 %{SOURCE1} %{buildroot}%{_unitdir}
-#install -p -m 644 %{SOURCE4} %{buildroot}%{_unitdir}
+install -p -m 644 %{SOURCE4} %{buildroot}%{_unitdir}
 # for additional args
 install -d %{buildroot}%{_sysconfdir}/sysconfig/
 install -p -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/sysconfig/docker
 
-# don't install secrets dir
-# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
-# ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-# ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+# install secrets dir
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# rhbz#1110876 - update symlinks for subscription management
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
 %pre
 getent group docker > /dev/null || %{_sbindir}/groupadd -r docker
@@ -156,17 +149,17 @@ exit 0
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_bindir}/docker
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
 %dir %{_libexecdir}/docker
 %{_libexecdir}/docker/dockerinit
 %{_unitdir}/docker.service
-#%{_unitdir}/docker.socket
-%{_sysconfdir}/sysconfig/docker
-%dir %{_sysconfdir}/bash_completion.d
-%{_sysconfdir}/bash_completion.d/docker.bash
+%{_unitdir}/docker.socket
+%config(noreplace) %{_sysconfdir}/sysconfig/docker
+%{_datadir}/bash-completion/completions/docker
 %{_datadir}/zsh/site-functions/_docker
 %dir %{_sharedstatedir}/docker
 %dir %{_sysconfdir}/udev/rules.d
@@ -179,16 +172,100 @@ exit 0
 %{_datadir}/vim/vimfiles/syntax/dockerfile.vim
 
 %changelog
-* Wed Jul  2 2014 Johnny Hughes <johnny@centos.org> - 0.11.1-22.el7.centos
-- Roll in CentOS Branding
-- Remove subscription dependency for docker operation 
+* Fri Sep 12  2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-13
+- Fix sysconfig and docker.service script to allow $OPTIONS
 
-* Thu Jun 26 2014 Dan Walsh <dwalsh@redhat.com> - 0.11.1-22
-- Resolves: rhbz#1111760 - CVE-2014-3499
-- Remove docker.socket unit file until docker-1.0
+* Wed Sep 10  2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-12
+- Remove extra patches and ship only v1.1.2 plus secrets patch
 
-* Tue Jun 24 2014 Lokesh Mandvekar <lsm5@fedoraproject.org> - 0.11.1-20
-- Resolves: rhbz#1111760 - CVE-2014-3499
+* Tue Sep 2 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-10
+- Add  docker client entitlement certs
+
+* Fri Aug 8 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-9
+- Add Matt Heon patch to allow containers to work if machine is not entitled
+
+* Thu Aug 7 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-8
+- Fix handing of rhel repos
+
+* Mon Aug 4 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-6
+- Update man pages
+
+* Mon Jul 28 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-5
+- Fix environment patch
+- Add /etc/machine-id patch
+
+* Fri Jul 25 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-4
+- Add Secrets Patch back in
+
+* Fri Jul 25 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-3
+- Pull in latest docker-1.1.2 code
+
+* Fri Jul 25 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-2
+- Update to the latest from upstream
+- Add comment and envoroment patches to allow setting of comments and 
+- enviroment variables from docker import
+
+* Wed Jul 23 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.1-3
+- Install docker bash completions in proper location
+- Add audit_write as a default capability
+
+* Tue Jul 22 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.1-2
+- Update man pages
+- Fix docker pull registry/repo
+
+* Fri Jul 18 2014 Dan Walsh <dwalsh@redhat.com> - 1.1.1-1
+- Update to latest from upstream
+
+* Mon Jul 14 2014 Dan Walsh <dwalsh@redhat.com> - 1.0.0-10
+- Pass otions from /etc/sysconfig/docker into docker.service unit file
+
+* Thu Jul 10 2014 Dan Walsh <dwalsh@redhat.com> - 1.0.0-9
+- Fix docker-registry patch to handle search
+
+* Thu Jul 10 2014 Dan Walsh <dwalsh@redhat.com> - 1.0.0-8
+- Re-add %{_datadir}/rhel/secrets/rhel7.repo
+
+* Wed Jul 9 2014 Dan Walsh <dwalsh@redhat.com> - 1.0.0-7
+- Patch: Save "COMMENT" field in Dockerfile into image content.
+- Patch: Update documentation noting that SIGCHLD is not proxied.
+- Patch: Escape control and nonprintable characters in docker ps
+- Patch: machine-id: add container id access
+- Patch: Report child error better (and later)
+- Patch: Fix invalid fd race
+- Patch: Super minimal host based secrets
+- Patch: libcontainer: Mount cgroups in the container
+- Patch: pkg/cgroups Add GetMounts() and GetAllSubsystems()
+- Patch: New implementation of /run support
+- Patch: Error if Docker daemon starts with BTRFS graph driver and SELinux enabled
+- Patch: Updated CLI documentation for docker pull with notes on specifying URL
+- Patch: Updated docker pull manpage to reflect ability to specify URL of registry.
+- Patch: Docker should use /var/tmp for large temporary files.
+- Patch: Add --registry-append and --registry-replace qualifier to docker daemon
+- Patch: Increase size of buffer for signals
+- Patch: Update documentation noting that SIGCHLD is not proxied.
+- Patch: Escape control and nonprintable characters in docker ps
+
+* Tue Jun 24 2014 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.0.0-4
+- Documentation update for --sig-proxy
+- increase size of buffer for signals
+- escape control and nonprintable characters in docker ps
+
+* Tue Jun 24 2014 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.0.0-3
+- Resolves: rhbz#1111769 - CVE-2014-3499
+
+* Thu Jun 19 2014 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.0.0-2
+- Resolves: rhbz#1109938 - upgrade to upstream version 1.0.0 + patches
+  use repo: https://github.com/lsm5/docker/commits/htb2
+- Resolves: rhbz#1109858 - fix race condition with secrets
+- add machine-id patch:
+https://github.com/vbatts/docker/commit/4f51757a50349bbbd2282953aaa3fc0e9a989741
+
+* Wed Jun 18 2014 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.0.0-1
+- Resolves: rhbz#1109938 - upgrade to upstream version 1.0.0 + patches
+  use repo: https://github.com/lsm5/docker/commits/2014-06-18-htb2
+- Resolves: rhbz#1110876 - secrets changes required for subscription
+management
+- btrfs now available (remove old comment)
 
 * Fri Jun 06 2014 Lokesh Mandvekar <lsm5@redhat.com> - 0.11.1-19
 - build with golang-github-kr-pty-0-0.19.git98c7b80.el7
