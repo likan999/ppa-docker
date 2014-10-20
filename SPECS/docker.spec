@@ -17,7 +17,7 @@ License:        ASL 2.0
 URL:            http://www.docker.io
 ExclusiveArch:  x86_64
 Source0:        https://github.com/rhatdan/docker/archive/%{commit}/docker-%{shortcommit}.tar.gz
-Patch1: docker-Super-minimal-host-based-secrets.patch
+#Patch1: docker-Super-minimal-host-based-secrets.patch
 # though final name for sysconf/sysvinit files is simply 'docker',
 # having .sysvinit and .sysconfig makes things clear
 Source1:        docker.service
@@ -31,12 +31,12 @@ BuildRequires:  glibc-static
 # http://code.google.com/p/go/source/detail?r=a15f344a9efa35ef168c8feaa92a15a1cdc93db5
 BuildRequires:  golang >= 1.2-7
 BuildRequires:  golang(github.com/gorilla/mux) >= 0-0.12
-BuildRequires:  golang(github.com/kr/pty) >= 0-0.20
+BuildRequires:  golang(github.com/kr/pty) >= 0-0.19
 BuildRequires:  golang(code.google.com/p/go.net/websocket)
 BuildRequires:  golang(code.google.com/p/gosqlite/sqlite3)
-BuildRequires:  golang(github.com/syndtr/gocapability/capability) >= 0-0.6
+BuildRequires:  golang(github.com/syndtr/gocapability/capability) >= 0-0.5
 BuildRequires:  golang(github.com/godbus/dbus)
-BuildRequires:  golang(github.com/coreos/go-systemd/activation) >= 2-2
+BuildRequires:  golang(github.com/coreos/go-systemd/activation) >= 2-1
 BuildRequires:  device-mapper-devel
 BuildRequires:  btrfs-progs-devel
 BuildRequires:  pkgconfig(systemd)
@@ -59,7 +59,7 @@ servers, OpenStack clusters, public instances, or combinations of the above.
 
 %prep
 %setup -q -n docker-%{commit}
-%patch1 -p1 -b .secrets
+#%patch1 -p1 -b .secrets
 tar zxf %{SOURCE2} 
 
 %build
@@ -122,12 +122,13 @@ install -p -m 644 %{SOURCE4} %{buildroot}%{_unitdir}
 install -d %{buildroot}%{_sysconfdir}/sysconfig/
 install -p -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/sysconfig/docker
 
-# install secrets dir
-install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
-# rhbz#1110876 - update symlinks for subscription management
-ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+#not needed for CentOS
+## install secrets dir
+#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+## rhbz#1110876 - update symlinks for subscription management
+#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
 %pre
 getent group docker > /dev/null || %{_sbindir}/groupadd -r docker
@@ -149,11 +150,12 @@ exit 0
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_bindir}/docker
-%dir %{_datadir}/rhel
-%dir %{_datadir}/rhel/secrets
-%{_datadir}/rhel/secrets/etc-pki-entitlement
-%{_datadir}/rhel/secrets/rhel7.repo
-%{_datadir}/rhel/secrets/rhsm
+#not needed for CentOS
+#%dir %{_datadir}/rhel
+#%dir %{_datadir}/rhel/secrets
+#%{_datadir}/rhel/secrets/etc-pki-entitlement
+#%{_datadir}/rhel/secrets/rhel7.repo
+#%{_datadir}/rhel/secrets/rhsm
 %dir %{_libexecdir}/docker
 %{_libexecdir}/docker/dockerinit
 %{_unitdir}/docker.service
@@ -172,6 +174,9 @@ exit 0
 %{_datadir}/vim/vimfiles/syntax/dockerfile.vim
 
 %changelog
+* Mon Oct 20 2014 Jim Perrin <jperrin@centos.org> - 1.1.2-13
+- debrand patch and remove entitlement stuff
+
 * Fri Sep 12  2014 Dan Walsh <dwalsh@redhat.com> - 1.1.2-13
 - Fix sysconfig and docker.service script to allow $OPTIONS
 
