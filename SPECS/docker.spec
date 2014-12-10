@@ -343,6 +343,9 @@ exit 0
 %{gopath}/src/%{common_path}/*
 
 %changelog
+* Wed Dec 10 2014 Jim Perrin <jperrin@centos.org> - 1.3.2-4
+- Comment out subscription secret bits in the spec.
+
 * Fri Dec 05 2014 Lokesh Mandvekar <lsm5@redhat.com> - 1.3.2-4
 - update libcontainer paths
 - update docker.sysconfig to include DOCKER_TMPDIR
