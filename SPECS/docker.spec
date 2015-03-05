@@ -1,6 +1,18 @@
 # modifying the dockerinit binary breaks the SHA1 sum check by docker
 %global __os_install_post %{_rpmconfigdir}/brp-compress
 
+# no python3 subpackage for docker-py
+%global with_python3 0
+
+# for python-websocket-client, prefix with w_
+%global w_modname websocket
+%global w_distname websocket-client
+%global w_eggname websocket_client
+%global w_version 0.14.1
+
+# for docker-python, prefix with dp_
+%global dp_version 0.7.1
+
 #debuginfo not supported with Go
 %global debug_package   %{nil}
 %global provider_tld    com
@@ -8,29 +20,47 @@
 %global project         docker
 %global repo            docker
 %global common_path     %{provider}.%{provider_tld}/%{project}
+%global d_version       1.4.1
 
 %global import_path                 %{common_path}/%{repo}
 %global import_path_libcontainer    %{common_path}/libcontainer
 
-%global commit      39fa2faad2f3d6fa5133de4eb740677202f53ef4
+%global commit      d26b358badf659627988adb88c1ba1d64c6d2f16
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
+%global atom_commit 3d4fd2092b1e8086c75de3db69084820e4f6d075
+
+%global utils_commit fb94a2822356e0bb7a481a16d553b3c9de669eb8
+
 Name:       docker
-Version:    1.3.2
-Release:    4%{?dist}
+Version:    %{d_version}
+Release:    37%{?dist}
 Summary:    Automates deployment of containerized applications
 License:    ASL 2.0
 URL:        http://www.docker.com
 # only x86_64 for now: https://github.com/docker/docker/issues/136
 ExclusiveArch:  x86_64
-Source0:    https://%{import_path}/archive/v%{version}.tar.gz
-Patch1:     go-md2man.patch
-Patch2:     0007-validate-image-ID-properly-before-load.patch
-Patch3:     secrets.patch
+#Source0:    https://%{import_path}/archive/v%{version}.tar.gz
+Source0:    https://github.com/rhatdan/docker/archive/%{commit}.tar.gz
 Source1:    docker.service
-Source2:    codegansta.tgz
 Source3:    docker.sysconfig
-Source5:    docker-storage.sysconfig
+Source4:    docker-storage.sysconfig
+Source5:    docker-logrotate.sh
+Source6:    README.docker-logrotate
+Source7:    docker-network.sysconfig
+# Source8 is the source tarball for python-websocket-client
+Source8:    http://pypi.python.org/packages/source/w/%{w_distname}/%{w_distname}-%{w_version}.tar.gz
+# Source9 is the source tarball for docker-py
+Source9:    http://pypi.python.org/packages/source/d/docker-py/docker-py-%{dp_version}.tar.gz
+# Source10 is the source tarball for atomic
+Source10:   https://github.com/rhatdan/atom/archive/%{atom_commit}.tar.gz
+# Source11 is the source tarball for dockertarsum and docker-fetch
+Source11:   https://github.com/vbatts/docker-utils/archive/%{utils_commit}.tar.gz
+Patch1:     go-md2man.patch
+Patch2:     docker-cert-path.patch
+Patch3:     codegangsta-cli.patch
+Patch4:     urlparse.patch
+Patch5:     docker-py-remove-lock.patch
 BuildRequires:  glibc-static
 BuildRequires:  golang >= 1.3.1
 BuildRequires:  device-mapper-devel
@@ -38,14 +68,14 @@ BuildRequires:  btrfs-progs-devel
 BuildRequires:  sqlite-devel
 BuildRequires:  pkgconfig(systemd)
 # appropriate systemd version as per rhbz#1171054
-Requires:   systemd-units >= 208-11.el7_0.5
+Requires:   systemd
 # need xz to work with ubuntu images
 Requires:   xz
 Requires:   device-mapper-libs >= 1.02.90-1
-Provides:   lxc-docker = %{version}
-Provides:   docker = %{version}
-Provides:	docker-io = %{version}
-Provides:   nsinit
+Requires:   subscription-manager
+Provides:   lxc-docker = %{d_version}-%{release}
+Provides:   docker = %{d_version}-%{release}
+Provides:   docker-io = %{d_version}-%{release}
 
 %description
 Docker is an open-source engine that automates the deployment of any
@@ -57,139 +87,86 @@ and between virtually any server. The same container that a developer builds
 and tests on a laptop will run at scale, in production*, on VMs, bare-metal
 servers, OpenStack clusters, public instances, or combinations of the above.
 
-%package devel
-BuildRequires:   golang >= 1.3.1
-Requires:   golang >= 1.3.1
-Summary:    A golang registry for global request variables (source libraries)
-Provides:   docker-pkg-devel docker-io-devel docker-io-pkg-devel
-Provides:   golang(%{import_path}) = %{version}-%{release}
-Provides:   golang(%{import_path}/api) = %{version}-%{release}
-Provides:   golang(%{import_path}/api/client) = %{version}-%{release}
-Provides:   golang(%{import_path}/api/server) = %{version}-%{release}
-Provides:   golang(%{import_path}/builder) = %{version}-%{release}
-Provides:   golang(%{import_path}/builder/parser) = %{version}-%{release}
-Provides:   golang(%{import_path}/builder/parser/dumper) = %{version}-%{release}
-Provides:   golang(%{import_path}/builtins) = %{version}-%{release}
-Provides:   golang(%{import_path}/contrib/docker-device-tool) = %{version}-%{release}
-Provides:   golang(%{import_path}/contrib/host-integration) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/execdriver) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/execdriver/execdrivers) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/execdriver/lxc) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/execdriver/native) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/execdriver/native/template) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/graphdriver) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/graphdriver/aufs) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/graphdriver/btrfs) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/graphdriver/devmapper) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/graphdriver/graphtest) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/graphdriver/vfs) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/networkdriver) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/networkdriver/bridge) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/networkdriver/ipallocator) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/networkdriver/portallocator) = %{version}-%{release}
-Provides:   golang(%{import_path}/daemon/networkdriver/portmapper) = %{version}-%{release}
-Provides:   golang(%{import_path}/dockerversion) = %{version}-%{release}
-Provides:   golang(%{import_path}/engine) = %{version}-%{release}
-Provides:   golang(%{import_path}/events) = %{version}-%{release}
-Provides:   golang(%{import_path}/graph) = %{version}-%{release}
-Provides:   golang(%{import_path}/image) = %{version}-%{release}
-Provides:   golang(%{import_path}/integration) = %{version}-%{release}
-Provides:   golang(%{import_path}/integration-cli) = %{version}-%{release}
-Provides:   golang(%{import_path}/links) = %{version}-%{release}
-Provides:   golang(%{import_path}/nat) = %{version}-%{release}
-Provides:   golang(%{import_path}/opts) = %{version}-%{release}
-Provides:   golang(%{import_path}/registry) = %{version}-%{release}
-Provides:   golang(%{import_path}/runconfig) = %{version}-%{release}
-Provides:   golang(%{import_path}/trust) = %{version}-%{release}
-Provides:   golang(%{import_path}/utils) = %{version}-%{release}
-Provides:   golang(%{import_path}/volumes) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/archive) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/broadcastwriter) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/chrootarchive) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/fileutils) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/graphdb) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/httputils) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/ioutils) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/iptables) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/jsonlog) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/listenbuffer) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/log) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/mflag) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/mflag/example) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/mount) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/namesgenerator) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/networkfs/etchosts) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/networkfs/resolvconf) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/parsers) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/parsers/filters) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/parsers/kernel) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/parsers/operatingsystem) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/pools) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/promise) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/proxy) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/reexec) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/signal) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/stdcopy) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/symlink) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/sysinfo) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/system) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/systemd) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/tailfile) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/tarsum) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/term) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/testutils) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/timeutils) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/truncindex) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/units) = %{version}-%{release}
-Provides:   golang(%{import_path}/pkg/version) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/apparmor) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/cgroups) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/cgroups/fs) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/cgroups/systemd) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/console) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/devices) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/label) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/mount) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/mount/nodes) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/namespaces) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/namespaces/nsenter) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/netlink) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/network) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/nsinit) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/security/capabilities) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/security/restrict) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/selinux) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/syncpipe) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/system) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/user) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/utils) = %{version}-%{release}
-Provides:   golang(%{import_path_libcontainer}/xattr) = %{version}-%{release}
+%package logrotate
+Summary:    cron job to run logrotate on docker containers
+Requires:   docker = %{version}-%{release}
+Provides:   docker-io-logrotate = %{version}-%{release}
 
-Obsoletes:	golang-github-docker-libcontainer-devel
+%description logrotate
+This package installs %{summary}. logrotate is assumed to be installed on
+containers for this to work, failures are silently ignored.
 
-%description devel
-This is the source libraries for docker.
+%package -n python-%{w_distname}
+Summary:    WebSocket client for python
+Version:    %{w_version}
+License:    LGPLv2
+BuildArch:  noarch
+
+%description -n python-%{w_distname}
+python-websocket-client module is WebSocket client for python. This
+provides the low level APIs for WebSocket. All APIs are the synchronous
+functions.
+
+python-websocket-client supports only hybi-13.
+
+%package python
+Version:        %{dp_version}
+License:        ASL 2.0
+Summary:        An API client for docker written in Python
+BuildRequires:  python2-devel
+BuildRequires:  python-setuptools
+BuildRequires:  python-tools
+BuildRequires:  python-requests
+Requires:       docker >= %{d_version}-%{release}
+Requires:       python-requests
+Requires:       python-%{w_distname} >= 0.11.0
+Requires:       python-six >= 1.3.0
+Requires:       python-argparse
+Provides:       python-docker-py = %{dp_version}-%{release}
+Provides:       python-docker = %{dp_version}-%{release}
+
+%description python
+%{summary}
 
 %prep
-%setup -qn docker-%{version}
+%setup -qn docker-%{commit}
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-rm daemon/*.orig
-tar zxf %{SOURCE2}
+cp %{SOURCE6} .
+
+# untar docker-utils tarball
+tar zxf %{SOURCE11}
+
+# untar python-websocket-client tarball
+tar zxf %{SOURCE8}
+rm -rf %{w_distname}-%{w_version}/%{w_distname}.egg-info
+pushd %{w_distname}-%{w_version}/websocket
+%patch4 -p1
+popd
+
+# untar docker-py tarball
+tar zxf %{SOURCE9}
+pushd docker-py-%{dp_version}
+%patch5 -p1
+popd
+
+# untar atom
+tar zxf %{SOURCE10}
+sed -i '/pylint/d' atom-%{atom_commit}/Makefile
+cp atom-%{atom_commit}/docs/* ./docs/man/.
 
 %build
 mkdir _build
 
 pushd _build
-  mkdir -p src/github.com/docker
+  mkdir -p src/github.com/{docker,vbatts}
   ln -s $(dirs +1 -l) src/github.com/docker/docker
+  ln -s $(dirs +1 -l)/docker-utils-%{utils_commit} src/github.com/vbatts/docker-utils
 popd
 
-export DOCKER_GITCOMMIT="%{shortcommit}/%{version}"
-export DOCKER_BUILDTAGS='selinux'
+export DOCKER_GITCOMMIT="%{shortcommit}/%{d_version}"
+export DOCKER_BUILDTAGS='selinux btrfs_noversion'
 export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
 
 # build docker binary
@@ -198,10 +175,11 @@ cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
 
 pushd $(pwd)/_build/src
-# build nsinit
-go build github.com/docker/libcontainer/nsinit
 # build go-md2man for building manpages
 go build github.com/cpuguy83/go-md2man
+# build dockertarsum and docker-fetch(commented out)
+go build github.com/vbatts/docker-utils/cmd/docker-fetch
+go build github.com/vbatts/docker-utils/cmd/dockertarsum
 popd
 
 cp _build/src/go-md2man docs/man/.
@@ -209,14 +187,33 @@ sed -i 's/go-md2man/.\/go-md2man/' docs/man/md2man-all.sh
 # build manpages
 docs/man/md2man-all.sh
 
+# build python-websocket-client
+pushd %{w_distname}-%{w_version}
+%{__python} setup.py build
+popd
+
+# build docker-py
+pushd docker-py-%{dp_version}
+%{__python} setup.py build
+popd
+
+# build atomic
+pushd atom-%{atom_commit}
+make all
+popd
+
 %install
 # install binary
 install -d %{buildroot}%{_bindir}
-install -p -m 755 bundles/%{version}/dynbinary/docker-%{version} %{buildroot}%{_bindir}/docker
+install -p -m 755 bundles/%{d_version}-dev/dynbinary/docker-%{d_version}-dev %{buildroot}%{_bindir}/docker
+
+# install dockertarsum and docker-fetch
+install -p -m 755 _build/src/docker-fetch %{buildroot}%{_bindir}
+install -p -m 755 _build/src/dockertarsum %{buildroot}%{_bindir}
 
 # install dockerinit
 install -d %{buildroot}%{_libexecdir}/docker
-install -p -m 755 bundles/%{version}/dynbinary/dockerinit-%{version} %{buildroot}%{_libexecdir}/docker/dockerinit
+install -p -m 755 bundles/%{d_version}-dev/dynbinary/dockerinit-%{d_version}-dev %{buildroot}%{_libexecdir}/docker/dockerinit
 
 # install manpages
 install -d %{buildroot}%{_mandir}/man1
@@ -228,15 +225,25 @@ install -p -m 644 docs/man/man5/* %{buildroot}%{_mandir}/man5
 install -d %{buildroot}%{_datadir}/bash-completion/completions/
 install -p -m 644 contrib/completion/bash/docker %{buildroot}%{_datadir}/bash-completion/completions/
 
-# install zsh completion
-install -d %{buildroot}%{_datadir}/zsh/site-functions
-install -p -m 644 contrib/completion/zsh/_docker %{buildroot}%{_datadir}/zsh/site-functions
+# install fish completion
+# create, install and own /usr/share/fish/vendor_completions.d until
+# upstream fish provides it
+install -dp %{buildroot}%{_datadir}/fish/vendor_completions.d
+install -p -m 644 contrib/completion/fish/docker.fish %{buildroot}%{_datadir}/fish/vendor_completions.d
+
+# install container logrotate cron script
+install -dp %{buildroot}%{_sysconfdir}/cron.daily/
+install -p -m 755 %{SOURCE5} %{buildroot}%{_sysconfdir}/cron.daily/docker-logrotate
 
 # install vim syntax highlighting
 install -d %{buildroot}%{_datadir}/vim/vimfiles/{doc,ftdetect,syntax}
 install -p -m 644 contrib/syntax/vim/doc/dockerfile.txt %{buildroot}%{_datadir}/vim/vimfiles/doc
 install -p -m 644 contrib/syntax/vim/ftdetect/dockerfile.vim %{buildroot}%{_datadir}/vim/vimfiles/ftdetect
 install -p -m 644 contrib/syntax/vim/syntax/dockerfile.vim %{buildroot}%{_datadir}/vim/vimfiles/syntax
+
+# install zsh completion
+install -d %{buildroot}%{_datadir}/zsh/site-functions
+install -p -m 644 contrib/completion/zsh/_docker %{buildroot}%{_datadir}/zsh/site-functions
 
 # install udev rules
 install -d %{buildroot}%{_sysconfdir}/udev/rules.d
@@ -248,54 +255,68 @@ install -d -m 700 %{buildroot}%{_sharedstatedir}/docker
 # install systemd/init scripts
 install -d %{buildroot}%{_unitdir}
 install -p -m 644 %{SOURCE1} %{buildroot}%{_unitdir}
-install -p -m 644 contrib/init/systemd/docker.socket %{buildroot}%{_unitdir}
+
 # for additional args
 install -d %{buildroot}%{_sysconfdir}/sysconfig/
 install -p -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/sysconfig/docker
-install -p -m 644 %{SOURCE5} %{buildroot}%{_sysconfdir}/sysconfig/docker-storage
+install -p -m 644 %{SOURCE4} %{buildroot}%{_sysconfdir}/sysconfig/docker-storage
+install -p -m 644 %{SOURCE7} %{buildroot}%{_sysconfdir}/sysconfig/docker-network
 
 # install secrets dir
-#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-mkdir -p %{buildroot}/etc/docker/certs.d/
-#ln -s /etc/rhsm/ca/redhat-uep.pem %{buildroot}/etc/docker/certs.d/redhat.com/redhat-ca.crt
+mkdir -p %{buildroot}/etc/docker/certs.d/redhat.com
+ln -s /etc/rhsm/ca/redhat-uep.pem %{buildroot}/etc/docker/certs.d/redhat.com/redhat-ca.crt
 
-# Install nsinit
-install -d -p %{buildroot}%{gopath}/src/%{import_path_libcontainer}/nsinit
-cp -pav vendor/src/%{import_path_libcontainer}/nsinit/*.go %{buildroot}%{gopath}/src/%{import_path_libcontainer}/nsinit
-install -d %{buildroot}%{_bindir}
-install -p -m 755 ./_build/src/nsinit %{buildroot}%{_bindir}/nsinit
+# install docker config directory
+install -dp %{buildroot}%{_sysconfdir}/docker/
 
-# Install libcontainer
-for dir in . apparmor cgroups cgroups/fs cgroups/systemd \
-	console devices label mount mount/nodes namespaces \
-	netlink network nsinit security/capabilities \
-	security/restrict selinux syncpipe system user utils xattr
-do
-    install -d -p %{buildroot}%{gopath}/src/%{import_path_libcontainer}/$dir
-    cp -pav vendor/src/%{import_path_libcontainer}/$dir/*.go %{buildroot}%{gopath}/src/%{import_path_libcontainer}/$dir
-done
+# install python-websocket-client
+pushd %{w_distname}-%{w_version}
+%{__python} setup.py install -O1 --skip-build --root=%{buildroot}
+mv %{buildroot}/%{_bindir}/wsdump.py \
+    %{buildroot}/%{_bindir}/wsdump
 
-# sources
-install -d -p %{buildroot}/%{gopath}/src/%{import_path}
+# unbundle cacert (python-websocket-client)
+rm %{buildroot}/%{python2_sitelib}/%{w_modname}/cacert.pem
+# And link in the mozilla ca (python-websocket-client)
+ln -s /etc/pki/tls/cert.pem \
+    %{buildroot}/%{python2_sitelib}/%{w_modname}/cacert.pem
 
-for dir in api builder builtins contrib/docker-device-tool \
-        contrib/host-integration daemon docker dockerinit \
-        dockerversion engine events graph \
-        image links nat opts pkg registry runconfig \
-        trust utils volumes
-do
-       echo $dir
-        cp -pav $dir %{buildroot}/%{gopath}/src/%{import_path}/
-done
-find %{buildroot}/%{gopath}/src/%{import_path}/ -name \*.registry -delete
+# remove tests that got installed into the buildroot (python-websocket-client)
+rm -rf %{buildroot}/%{python2_sitelib}/tests/
+
+# Remove executable bit from installed files. (python-websocket-client)
+find %{buildroot}/%{python2_sitelib} -type f -exec chmod -x {} \;
+popd
+
+# install docker-py
+pushd docker-py-%{dp_version}
+%{__python} setup.py install --root %{buildroot}
+popd
+
+# install atomic
+pushd atom-%{atom_commit}
+make install DESTDIR=%{buildroot}
+popd
+
+%check
+[ ! -e /run/docker.sock ] || {
+    mkdir test_dir
+    pushd test_dir
+    git clone https://%{import_path}
+    pushd docker
+    make test
+    popd
+    popd
+}
 
 %pre
-getent group docker > /dev/null || %{_sbindir}/groupadd -r docker
+getent passwd dockerroot > /dev/null || %{_sbindir}/useradd -r -d %{_sharedstatedir}/docker -s /sbin/nologin -c "Docker User" dockerroot
 exit 0
 
 %post
@@ -310,41 +331,197 @@ exit 0
 %files
 %doc AUTHORS CHANGELOG.md CONTRIBUTING.md MAINTAINERS NOTICE
 %doc LICENSE* README*.md
-%{_mandir}/man1/*
+%{_mandir}/man1/docker*
 %{_mandir}/man5/*
 %{_bindir}/docker
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
-#%{_datadir}/rhel/secrets/rhsm
-%dir %{_libexecdir}/docker
-%{_libexecdir}/docker/dockerinit
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
+%{_libexecdir}/docker
 %{_unitdir}/docker.service
-%{_unitdir}/docker.socket
 %config(noreplace) %{_sysconfdir}/sysconfig/docker
 %config(noreplace) %{_sysconfdir}/sysconfig/docker-storage
-%{_sysconfdir}/docker/certs.d
+%config(noreplace) %{_sysconfdir}/sysconfig/docker-network
 %{_datadir}/bash-completion/completions/docker
-%{_datadir}/zsh/site-functions/_docker
 %dir %{_sharedstatedir}/docker
 %dir %{_sysconfdir}/udev/rules.d
 %{_sysconfdir}/udev/rules.d/80-docker.rules
+%dir %{_datadir}/fish/vendor_completions.d/
+%{_datadir}/fish/vendor_completions.d/docker.fish
 %dir %{_datadir}/vim/vimfiles/doc
 %{_datadir}/vim/vimfiles/doc/dockerfile.txt
 %dir %{_datadir}/vim/vimfiles/ftdetect
 %{_datadir}/vim/vimfiles/ftdetect/dockerfile.vim
 %dir %{_datadir}/vim/vimfiles/syntax
 %{_datadir}/vim/vimfiles/syntax/dockerfile.vim
-%{_bindir}/nsinit
+%dir %{_datadir}/zsh/site-functions
+%{_datadir}/zsh/site-functions/_docker
+%{_sysconfdir}/docker
+%{_bindir}/docker-fetch
+%{_bindir}/dockertarsum
 
-%files devel
-%doc AUTHORS CHANGELOG.md CONTRIBUTING.md LICENSE MAINTAINERS NOTICE README.md 
-%{gopath}/src/%{common_path}/*
+%files logrotate
+%doc README.docker-logrotate
+%{_sysconfdir}/cron.daily/docker-logrotate
+
+%files -n python-websocket-client
+%doc %{w_distname}-%{w_version}/{README.rst,LICENSE}
+%{python2_sitelib}/%{w_modname}/
+%{python2_sitelib}/%{w_eggname}*%{w_version}*
+%{_bindir}/wsdump
+
+%files python
+%doc docker-py-%{dp_version}/{LICENSE,README.md}
+%config(noreplace) %{_sysconfdir}/sysconfig/atomic
+%{python_sitelib}/docker
+%{python_sitelib}/docker_py-%{dp_version}-py2*.egg-info
+%{python_sitelib}/atomic*.egg-info
+%{_sysconfdir}/profile.d/atomic.sh
+%{_bindir}/atomic
+%{_mandir}/man1/atomic*
 
 %changelog
-* Wed Dec 10 2014 Jim Perrin <jperrin@centos.org> - 1.3.2-4
-- Comment out subscription secret bits in the spec.
+* Fri Jan 30 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-37
+- add extra options to /etc/sysconfig/docker to add/block registries
+- build atom commit#3d4fd20
+
+* Fri Jan 30 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-36
+- remove dependency on python-backports
+
+* Fri Jan 30 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-35
+- build atomic rhatdan/master commit#973142b
+- build docker rhatdan/1.4.1-beta2 commit#d26b358
+
+* Fri Jan 30 2015 Michal Minar <miminar@redhat.com> - 1.4.1-34
+- added patch fixed tagging issue
+
+* Fri Jan 30 2015 Michal Minar <miminar@redhat.com> - 1.4.1-33
+- build docker rhatdan/1.4.1-beta2 commit#b024f0f
+- --registry-(replace|preprend) replaced with --(add|block)-registry
+
+* Thu Jan 29 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-32
+- build atom commit#567c2c8
+
+* Thu Jan 29 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-31
+- build atom commit#b9e02ad
+
+* Wed Jan 28 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-30
+- Require python-backports >= 1.0-8 for docker-python
+
+* Wed Jan 28 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-29
+- build docker rhatdan/1.4.1-beta2 commit#0af307b
+- --registry-replace|prepend flags via Michal Minar <miminar@redhat.com>
+- build atomic rhatdan/master commit#37f9be0
+
+* Tue Jan 27 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-27
+- patch to avoid crash in atomic host
+
+* Tue Jan 27 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-26
+- build docker rhatdan/1.4.1-beta2 commit#0b4cade
+- build atomic rhatdan/master commit#b8c7b9d
+- build docker-utils vbatts/master commit#fb94a28
+
+* Fri Jan 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-25
+- build atomic commit#fcbc57b with fix for install/upgrade/status
+- build docker rhatdan/1.4.1-beta2 commit#f476836
+
+* Fri Jan 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-24
+- install dockertarsum from github.com/vbatts/docker-utils
+
+* Fri Jan 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-23
+- build rhatdan/atom commit#ef16d40
+- try urlparse from six, else from argparse
+
+* Fri Jan 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-22
+- use python-argparse to provide urlparse
+
+* Fri Jan 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-21
+- move atomic bits into -python subpackage
+
+* Fri Jan 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-20
+- update atom commit#10fc4c8
+
+* Fri Jan 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-19
+- build rhatdan/1.4.1-beta2 commit#35a8dc5
+- --registry-prepend instead of --registry-append
+
+* Thu Jan 22 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-18
+- don't install nsinit
+
+* Thu Jan 22 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-17
+- install atomic and manpages
+- don't provide -devel subpackage
+
+* Thu Jan 22 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-16
+- install python-websocket-client and python-docker as subpackages
+
+* Thu Jan 22 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-15
+- build rhatdan/1.4.1-beta2 commit#06670da
+- install subscription manager
+
+* Tue Jan 20 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-14
+- increment release number to avoid conflict with 7.0
+
+* Tue Jan 20 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-13
+- build rhatdan/1.4.1-beta2 commit#2de8e5d
+- Resolves: rhbz#1180718 - MountFlags=slave in unitfile
+
+* Mon Jan 19 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-12
+- build rhatdan/1.4.1-beta2 commit#218805f
+
+* Mon Jan 19 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-11
+- build rhatdan/1.4.1-beta2 commit#4b7addf
+
+* Fri Jan 16 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-10
+- build rhatdan/1.4.1-beta2 commit #a0c7884
+- socket activation not used
+- include docker_transition_unconfined boolean info and disable socket
+activation in /etc/sysconfig/docker
+- docker group not created
+
+* Fri Jan 16 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-9
+- run all tests and not just unit tests
+- replace codegansta.tgz with codegangsta-cli.patch
+
+* Thu Jan 15 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-8
+- build rhatdan/1.4.1-beta2 commit #6ee2421
+
+* Wed Jan 14 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-7
+- build rhatdan/1.4.1-beta2 01a64e011da131869b42be8b2f11f540fd4b8f33
+- run tests inside a docker repo during check phase
+
+* Mon Jan 12 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-6
+- build rhatdan/1.4.1-beta2 01a64e011da131869b42be8b2f11f540fd4b8f33
+
+* Wed Jan 07 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-5
+- own /etc/docker
+- include check for unit tests
+
+* Fri Dec 19 2014 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-4
+- Install vim and shell completion files in main package itself
+
+* Thu Dec 18 2014 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-3
+- rename cron script
+- change enable/disable to true/false
+
+* Thu Dec 18 2014 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-2
+- Enable the logrotate cron job by default, disable via sysconfig variable
+- Install docker-network and docker-container-logrotate sysconfig files
+
+* Thu Dec 18 2014 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-1
+- Resolves: rhbz#1174351 - update to 1.4.1
+- Provide subpackages for fish and zsh completion and vim syntax highlighting
+- Provide subpackage to run logrotate on running containers as a daily cron
+job
+
+* Mon Dec 15 2014 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.0-1
+- Resolves: rhbz#1174266 - update to 1.4.0
+- Fixes: CVE-2014-9357, CVE-2014-9358
+- uses /etc/docker as cert path
+- create dockerroot user
+- skip btrfs version check
 
 * Fri Dec 05 2014 Lokesh Mandvekar <lsm5@redhat.com> - 1.3.2-4
 - update libcontainer paths
