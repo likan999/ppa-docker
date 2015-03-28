@@ -263,14 +263,14 @@ install -p -m 644 %{SOURCE4} %{buildroot}%{_sysconfdir}/sysconfig/docker-storage
 install -p -m 644 %{SOURCE7} %{buildroot}%{_sysconfdir}/sysconfig/docker-network
 
 # install secrets dir
-install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+# ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+# ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+# ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-mkdir -p %{buildroot}/etc/docker/certs.d/redhat.com
-ln -s /etc/rhsm/ca/redhat-uep.pem %{buildroot}/etc/docker/certs.d/redhat.com/redhat-ca.crt
+mkdir -p %{buildroot}/etc/docker/certs.d/
+#ln -s /etc/rhsm/ca/redhat-uep.pem %{buildroot}/etc/docker/certs.d/redhat.com/redhat-ca.crt
 
 # install docker config directory
 install -dp %{buildroot}%{_sysconfdir}/docker/
@@ -334,11 +334,6 @@ exit 0
 %{_mandir}/man1/docker*
 %{_mandir}/man5/*
 %{_bindir}/docker
-%dir %{_datadir}/rhel
-%dir %{_datadir}/rhel/secrets
-%{_datadir}/rhel/secrets/etc-pki-entitlement
-%{_datadir}/rhel/secrets/rhel7.repo
-%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/docker
 %{_unitdir}/docker.service
 %config(noreplace) %{_sysconfdir}/sysconfig/docker
@@ -383,6 +378,9 @@ exit 0
 %{_mandir}/man1/atomic*
 
 %changelog
+* Sat Mar 28 2015 Johnny Hughes <johnny@centos.org> - 1.4.1-37
+- Comment out subscription secret bits in the spec.
+
 * Fri Jan 30 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-37
 - add extra options to /etc/sysconfig/docker to add/block registries
 - build atom commit#3d4fd20
