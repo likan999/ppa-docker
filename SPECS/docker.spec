@@ -78,7 +78,6 @@ Requires:   systemd
 # need xz to work with ubuntu images
 Requires:   xz
 Requires:   device-mapper-libs >= 1.02.90-1
-Requires:   subscription-manager
 Provides:   lxc-docker = %{d_version}-%{d_release}
 Provides:   docker = %{d_version}-%{d_release}
 Provides:   docker-io = %{d_version}-%{d_release}
