@@ -9,9 +9,11 @@
 %global w_distname websocket-client
 %global w_eggname websocket_client
 %global w_version 0.14.1
+%global w_release 64
 
 # for docker-python, prefix with dp_
-%global dp_version 0.7.1
+%global dp_version 1.0.0
+%global dp_release 21
 
 #debuginfo not supported with Go
 %global debug_package   %{nil}
@@ -20,28 +22,32 @@
 %global project         docker
 %global repo            docker
 %global common_path     %{provider}.%{provider_tld}/%{project}
-%global d_version       1.4.1
+%global d_version       1.5.0
+%global d_release       27
 
 %global import_path                 %{common_path}/%{repo}
 %global import_path_libcontainer    %{common_path}/libcontainer
 
-%global commit      d26b358badf659627988adb88c1ba1d64c6d2f16
+%global commit      fc0329baa1cc2f73349d564fb3d32e0112c51385
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
-%global atom_commit 3d4fd2092b1e8086c75de3db69084820e4f6d075
+%global atomic_commit 4ff7dbd69a8b94309efda0683a824c4acf8e2ecc
+%global atomic_shortcommit %(c=%{atomic_commit}; echo ${c:0:7})
+%global atomic_release 8
 
-%global utils_commit fb94a2822356e0bb7a481a16d553b3c9de669eb8
+%global utils_commit dcb4518b69b2071385089290bc75c63e5251fcba
 
 Name:       docker
 Version:    %{d_version}
-Release:    37%{?dist}
+Release:    %{d_release}%{?dist}
 Summary:    Automates deployment of containerized applications
 License:    ASL 2.0
 URL:        http://www.docker.com
 # only x86_64 for now: https://github.com/docker/docker/issues/136
 ExclusiveArch:  x86_64
 #Source0:    https://%{import_path}/archive/v%{version}.tar.gz
-Source0:    https://github.com/rhatdan/docker/archive/%{commit}.tar.gz
+# Branch used available at https://github.com/lsm5/docker/commits/1.5.0
+Source0:    https://github.com/lsm5/docker/archive/%{commit}.tar.gz
 Source1:    docker.service
 Source3:    docker.sysconfig
 Source4:    docker-storage.sysconfig
@@ -53,14 +59,14 @@ Source8:    http://pypi.python.org/packages/source/w/%{w_distname}/%{w_distname}
 # Source9 is the source tarball for docker-py
 Source9:    http://pypi.python.org/packages/source/d/docker-py/docker-py-%{dp_version}.tar.gz
 # Source10 is the source tarball for atomic
-Source10:   https://github.com/rhatdan/atom/archive/%{atom_commit}.tar.gz
+Source10:   https://github.com/projectatomic/atomic/archive/%{atomic_commit}.tar.gz
 # Source11 is the source tarball for dockertarsum and docker-fetch
 Source11:   https://github.com/vbatts/docker-utils/archive/%{utils_commit}.tar.gz
 Patch1:     go-md2man.patch
-Patch2:     docker-cert-path.patch
 Patch3:     codegangsta-cli.patch
 Patch4:     urlparse.patch
 Patch5:     docker-py-remove-lock.patch
+Patch6:     0001-replace-closed-with-fp-isclosed-for-rhel7.patch
 BuildRequires:  glibc-static
 BuildRequires:  golang >= 1.3.1
 BuildRequires:  device-mapper-devel
@@ -73,9 +79,9 @@ Requires:   systemd
 Requires:   xz
 Requires:   device-mapper-libs >= 1.02.90-1
 Requires:   subscription-manager
-Provides:   lxc-docker = %{d_version}-%{release}
-Provides:   docker = %{d_version}-%{release}
-Provides:   docker-io = %{d_version}-%{release}
+Provides:   lxc-docker = %{d_version}-%{d_release}
+Provides:   docker = %{d_version}-%{d_release}
+Provides:   docker-io = %{d_version}-%{d_release}
 
 %description
 Docker is an open-source engine that automates the deployment of any
@@ -89,8 +95,8 @@ servers, OpenStack clusters, public instances, or combinations of the above.
 
 %package logrotate
 Summary:    cron job to run logrotate on docker containers
-Requires:   docker = %{version}-%{release}
-Provides:   docker-io-logrotate = %{version}-%{release}
+Requires:   docker = %{d_version}-%{d_release}
+Provides:   docker-io-logrotate = %{d_version}-%{d_release}
 
 %description logrotate
 This package installs %{summary}. logrotate is assumed to be installed on
@@ -99,6 +105,7 @@ containers for this to work, failures are silently ignored.
 %package -n python-%{w_distname}
 Summary:    WebSocket client for python
 Version:    %{w_version}
+Release:    %{w_release}%{?dist}
 License:    LGPLv2
 BuildArch:  noarch
 
@@ -111,27 +118,55 @@ python-websocket-client supports only hybi-13.
 
 %package python
 Version:        %{dp_version}
+Release:        %{dp_release}%{?dist}
 License:        ASL 2.0
 Summary:        An API client for docker written in Python
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
 BuildRequires:  python-tools
 BuildRequires:  python-requests
-Requires:       docker >= %{d_version}-%{release}
+Requires:       docker >= %{d_version}-%{d_release}
 Requires:       python-requests
 Requires:       python-%{w_distname} >= 0.11.0
 Requires:       python-six >= 1.3.0
 Requires:       python-argparse
-Provides:       python-docker-py = %{dp_version}-%{release}
-Provides:       python-docker = %{dp_version}-%{release}
+Provides:       python-docker-py = %{dp_version}-%{dp_release}
+Provides:       python-docker = %{dp_version}-%{dp_release}
 
 %description python
 %{summary}
 
+%package -n atomic
+Version: 0
+Release: 0.%{atomic_release}.git%{atomic_shortcommit}%{?dist}
+Summary: Tool for managing ProjectAtomic systems and containers
+License: LGPLv2+
+ExclusiveArch: x86_64
+BuildRequires: python2-devel
+BuildRequires: python-setuptools
+BuildRequires: python-tools
+BuildRequires: python-requests
+Requires: docker
+Requires: python-requests
+Requires: python-docker-py >= %{dp_version}-%{dp_release}
+Requires: python-%{w_distname} >= 0.11.0
+Requires: python-six >= 1.3.0
+Conflicts: python-docker < 1.0.0-11
+
+%description -n atomic
+The goal of Atomic is to provide a high level, coherent entrypoint to the
+system, and fill in gaps.
+
+For Docker, atomic can make it easier to interact with special kinds of
+containers, such as super-privileged debugging tools and the like.
+
+The atomic host subcommand wraps rpm-ostree, currently just providing a
+friendlier name, but in the future Atomic may provide more unified
+management.
+
 %prep
 %setup -qn docker-%{commit}
 %patch1 -p1
-%patch2 -p1
 %patch3 -p1
 cp %{SOURCE6} .
 
@@ -149,12 +184,13 @@ popd
 tar zxf %{SOURCE9}
 pushd docker-py-%{dp_version}
 %patch5 -p1
+%patch6 -p1
 popd
 
-# untar atom
+# untar atomic
 tar zxf %{SOURCE10}
-sed -i '/pylint/d' atom-%{atom_commit}/Makefile
-cp atom-%{atom_commit}/docs/* ./docs/man/.
+sed -i '/pylint/d' atomic-%{atomic_commit}/Makefile
+sed -i 's/go-md2man/.\/go-md2man/' atomic-%{atomic_commit}/Makefile
 
 %build
 mkdir _build
@@ -170,21 +206,24 @@ export DOCKER_BUILDTAGS='selinux btrfs_noversion'
 export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
 
 # build docker binary
-hack/make.sh dynbinary
+sed -i '/rm -r autogen/d' hack/make.sh
+DEBUG=1 hack/make.sh dynbinary
 cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
 
 pushd $(pwd)/_build/src
 # build go-md2man for building manpages
 go build github.com/cpuguy83/go-md2man
-# build dockertarsum and docker-fetch(commented out)
+# build dockertarsum and docker-fetch(commented out, doesn't build)
 go build github.com/vbatts/docker-utils/cmd/docker-fetch
 go build github.com/vbatts/docker-utils/cmd/dockertarsum
 popd
 
 cp _build/src/go-md2man docs/man/.
+cp _build/src/go-md2man atomic-%{atomic_commit}/.
+
 sed -i 's/go-md2man/.\/go-md2man/' docs/man/md2man-all.sh
-# build manpages
+# build docker manpages
 docs/man/md2man-all.sh
 
 # build python-websocket-client
@@ -198,7 +237,7 @@ pushd docker-py-%{dp_version}
 popd
 
 # build atomic
-pushd atom-%{atom_commit}
+pushd atomic-%{atomic_commit}
 make all
 popd
 
@@ -246,8 +285,8 @@ install -d %{buildroot}%{_datadir}/zsh/site-functions
 install -p -m 644 contrib/completion/zsh/_docker %{buildroot}%{_datadir}/zsh/site-functions
 
 # install udev rules
-install -d %{buildroot}%{_sysconfdir}/udev/rules.d
-install -p -m 755 contrib/udev/80-docker.rules %{buildroot}%{_sysconfdir}/udev/rules.d
+install -d %{buildroot}%{_prefix}/lib/udev/rules.d
+install -p -m 755 contrib/udev/80-docker.rules %{buildroot}%{_prefix}/lib/udev/rules.d
 
 # install storage dir
 install -d -m 700 %{buildroot}%{_sharedstatedir}/docker
@@ -263,14 +302,15 @@ install -p -m 644 %{SOURCE4} %{buildroot}%{_sysconfdir}/sysconfig/docker-storage
 install -p -m 644 %{SOURCE7} %{buildroot}%{_sysconfdir}/sysconfig/docker-network
 
 # install secrets dir
-# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-# ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-# ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-# ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-mkdir -p %{buildroot}/etc/docker/certs.d/
-#ln -s /etc/rhsm/ca/redhat-uep.pem %{buildroot}/etc/docker/certs.d/redhat.com/redhat-ca.crt
+mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
 
 # install docker config directory
 install -dp %{buildroot}%{_sysconfdir}/docker/
@@ -300,7 +340,7 @@ pushd docker-py-%{dp_version}
 popd
 
 # install atomic
-pushd atom-%{atom_commit}
+pushd atomic-%{atomic_commit}
 make install DESTDIR=%{buildroot}
 popd
 
@@ -312,6 +352,9 @@ popd
     pushd docker
     make test
     popd
+    popd
+    pushd atomic-%{atomic_commit}
+    make test
     popd
 }
 
@@ -334,6 +377,11 @@ exit 0
 %{_mandir}/man1/docker*
 %{_mandir}/man5/*
 %{_bindir}/docker
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/docker
 %{_unitdir}/docker.service
 %config(noreplace) %{_sysconfdir}/sysconfig/docker
@@ -341,8 +389,7 @@ exit 0
 %config(noreplace) %{_sysconfdir}/sysconfig/docker-network
 %{_datadir}/bash-completion/completions/docker
 %dir %{_sharedstatedir}/docker
-%dir %{_sysconfdir}/udev/rules.d
-%{_sysconfdir}/udev/rules.d/80-docker.rules
+%{_prefix}/lib/udev/rules.d/80-docker.rules
 %dir %{_datadir}/fish/vendor_completions.d/
 %{_datadir}/fish/vendor_completions.d/docker.fish
 %dir %{_datadir}/vim/vimfiles/doc
@@ -369,17 +416,140 @@ exit 0
 
 %files python
 %doc docker-py-%{dp_version}/{LICENSE,README.md}
-%config(noreplace) %{_sysconfdir}/sysconfig/atomic
 %{python_sitelib}/docker
 %{python_sitelib}/docker_py-%{dp_version}-py2*.egg-info
-%{python_sitelib}/atomic*.egg-info
+
+%files -n atomic
+%doc atomic-%{atomic_commit}/COPYING atomic-%{atomic_commit}/README.md
+%config(noreplace) %{_sysconfdir}/sysconfig/atomic
 %{_sysconfdir}/profile.d/atomic.sh
 %{_bindir}/atomic
 %{_mandir}/man1/atomic*
+%{_datadir}/bash-completion/completions/atomic
+%{python_sitelib}/atomic*.egg-info
 
 %changelog
-* Sat Mar 28 2015 Johnny Hughes <johnny@centos.org> - 1.4.1-37
-- Comment out subscription secret bits in the spec.
+* Wed Mar 25 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-27
+- revert rhatdan/docker commit 72a9000fcfa2ec5a2c4a29fb62a17c34e6dd186f
+- Resolves: rhbz#1205276
+
+* Tue Mar 24 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-26
+- revert rhatdan/docker commit 74310f16deb3d66444bb461c29a09966170367db
+
+* Mon Mar 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-25
+- don't delete autogen in hack/make.sh
+- re-enable docker-fetch
+
+* Mon Mar 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-24
+- bump release tags for all
+
+* Mon Mar 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-23
+- Resolves: rhbz#1204260 - do not delete linkgraph.db before starting service
+
+* Mon Mar 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-22
+- increment release tag (no other changes)
+
+* Sun Mar 22 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-21
+- install cert for redhat.io authentication
+
+* Mon Mar 16 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-20
+- Resolves: rhbz#1202517 - fd leak
+- build docker rhatdan/1.5.0 commit#ad5a92a
+- build atomic master commit#4ff7dbd
+
+* Tue Mar 10 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-19
+- Resolves: rhbz#1200394 - don't mount /run as tmpfs if mounted as a volume
+- build docker rhatdan/1.5.0 commit#5992901
+- no rpm change, ensure release tags in changelogs are consistent
+
+* Tue Mar 10 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-18
+- handle updates smoothly from a unified docker-python to split out
+docker-python and atomic
+
+* Tue Mar 10 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-17
+- build docker @rhatdan/1.5.0 commit#d7dfe82
+- Resolves: rhbz#1198599 - use homedir from /etc/passwd if $HOME isn't set
+- atomic provided in a separate subpackage
+
+* Mon Mar 09 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-16
+- build docker @rhatdan/1.5.0 commit#867ff5e
+- build atomic master commit#
+- Resolves: rhbz#1194445 - patch docker-python to make it work with older
+python-requests
+- Resolves: rhbz#1200104 - dns resolution works with selinux enforced
+
+* Mon Mar 09 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-15
+- Resolves: rhbz#1199433 - correct install path for 80-docker.rules
+
+* Mon Mar 09 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-14
+- build docker, @rhatdan/1.5.0 commit#365cf68
+- build atomic, master commit#f175fb6
+
+* Fri Mar 06 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-13
+- build docker, @rhatdan/1.5.0 commit#e0fdceb
+- build atomic, master commit#ef2b661
+
+* Thu Mar 05 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-12
+- Resolves: rhbz#1198630
+- build docker, @rhatdan/1.5.0 commit#233dc3e
+- build atomic, master commit#c6390c7
+
+* Tue Mar 03 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-11
+- build docker rhatdan/1.5.0 commit#3a4d0f1
+- build atomic master commit#d68d76b
+- Resolves: rhbz#1188252 - rm /var/lib/docker/linkgraph.db in unit file
+before starting docker daemon
+
+* Mon Mar 02 2015 Michal Minar <miminar@redhat.com> - 1.5.0-10
+- Fixed and speeded up repository searching
+
+* Fri Feb 27 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-9
+- increment all release tags
+
+* Fri Feb 27 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-9
+- increment docker release tag
+
+* Thu Feb 26 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-7
+- Resolves: rhbz#1196709 - fix docker build's authentication issue
+- Resolves: rhbz#1197158 - fix ADD_REGISTRY and BLOCK_REGISTRY in unitfile
+- Build docker-utils commit#dcb4518
+- update docker-python to 1.0.0
+- disable docker-fetch (not compiling currently)
+
+* Tue Feb 24 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-6
+- build docker rhatdan/1.5.0 commit#e5d3e08
+- docker registers machine with systemd
+- create journal directory so that journal on host can see journal content in
+container
+- build atomic commit#a7ff4cb
+
+* Mon Feb 16 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-5
+- use docker rhatdan/1.5.0 commit#1a4e592
+- Complete fix for rhbz#1192171 - patch included in docker tarball
+- use docker-python 0.7.2
+- Resolves: rhbz#1192312 - solve version-release requirements for
+subpackages
+
+* Mon Feb 16 2015 Michal Minar <miminar@redhat.com> - 1.5.0-4
+- Readded --(add|block)-registry flags.
+
+* Fri Feb 13 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-2
+- Resolves: rhbz#1192312 - custom release numbers for 
+python-websocket-client and docker-py
+- Resolves: rhbz#1192171 - changed options and env vars for
+adding/replacing registries
+
+* Thu Feb 12 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-1
+- build docker rhatdan/1.5 a06d357
+- build atomic projectaomic/master d8c35ce
+
+* Thu Feb 05 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-39
+- Resolves: rhbz#1187993 - allow core dump with no size limit
+- build atomic commit#98c21fd
+
+* Mon Feb 02 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-38
+- Resolves: rhbz#1188318
+- atom commit#ea7ab31
 
 * Fri Jan 30 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.4.1-37
 - add extra options to /etc/sysconfig/docker to add/block registries
