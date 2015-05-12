@@ -9,11 +9,11 @@
 %global w_distname websocket-client
 %global w_eggname websocket_client
 %global w_version 0.14.1
-%global w_release 65
+%global w_release 78
 
 # for docker-python, prefix with dp_
 %global dp_version 1.0.0
-%global dp_release 22
+%global dp_release 35
 
 #debuginfo not supported with Go
 %global debug_package   %{nil}
@@ -22,20 +22,39 @@
 %global project         docker
 %global repo            docker
 %global common_path     %{provider}.%{provider_tld}/%{project}
-%global d_version       1.5.0
-%global d_release       28
+%global d_version       1.6.0
+%global d_release       11
 
 %global import_path                 %{common_path}/%{repo}
 %global import_path_libcontainer    %{common_path}/libcontainer
 
-%global commit      fc0329baa1cc2f73349d564fb3d32e0112c51385
-%global shortcommit %(c=%{commit}; echo ${c:0:7})
+%global d_commit      8aae715d99d7fdeaed1c8043e789d3620520ffef
+%global d_shortcommit %(c=%{d_commit}; echo ${c:0:7})
 
-%global atomic_commit 4ff7dbd69a8b94309efda0683a824c4acf8e2ecc
+%global atomic_commit 5b2fa8d261fc3392b44c50b631d586724f517138
 %global atomic_shortcommit %(c=%{atomic_commit}; echo ${c:0:7})
-%global atomic_release 9
+%global atomic_release 22
 
 %global utils_commit dcb4518b69b2071385089290bc75c63e5251fcba
+
+# docker-selinux stuff (prefix with ds_ for version/release etc.)
+# Some bits borrowed from the openstack-selinux package
+%global ds_commit d59539be7eba77297e044fdc5de871f7ceaf15a3
+%global ds_shortcommit %(c=%{ds_commit}; echo ${c:0:7})
+%global selinuxtype targeted
+%global moduletype services
+%global modulenames %{repo}
+
+# Usage: _format var format
+# Expand 'modulenames' into various formats as needed
+# Format must contain '$x' somewhere to do anything useful
+%global _format() export %1=""; for x in %{modulenames}; do %1+=%2; %1+=" "; done;
+
+# Relabel files
+%global relabel_files() %{_sbindir}/restorecon -R %{_bindir}/%{repo} %{_localstatedir}/run/%{repo}.sock %{_localstatedir}/run/%{repo}.pid %{_sharedstatedir}/%{repo} %{_sysconfdir}/%{repo} %{_localstatedir}/log/%{repo} %{_localstatedir}/log/lxc %{_localstatedir}/lock/lxc %{_unitdir}/%{repo}.service %{_sysconfdir}/%{repo} &> /dev/null || :
+
+# Version of SELinux we were using
+%global selinux_policyver 3.13.1-23
 
 Name:       docker
 Version:    %{d_version}
@@ -46,8 +65,8 @@ URL:        http://www.docker.com
 # only x86_64 for now: https://github.com/docker/docker/issues/136
 ExclusiveArch:  x86_64
 #Source0:    https://%{import_path}/archive/v%{version}.tar.gz
-# Branch used available at https://github.com/lsm5/docker/commits/1.5.0
-Source0:    https://github.com/lsm5/docker/archive/%{commit}.tar.gz
+# Branch used available at https://github.com/rhatdan/docker/commits/rhel7-1.6
+Source0:    https://github.com/rhatdan/docker/archive/%{d_commit}.tar.gz
 Source1:    docker.service
 Source3:    docker.sysconfig
 Source4:    docker-storage.sysconfig
@@ -62,14 +81,15 @@ Source9:    http://pypi.python.org/packages/source/d/docker-py/docker-py-%{dp_ve
 Source10:   https://github.com/projectatomic/atomic/archive/%{atomic_commit}.tar.gz
 # Source11 is the source tarball for dockertarsum and docker-fetch
 Source11:   https://github.com/vbatts/docker-utils/archive/%{utils_commit}.tar.gz
+# Source12 is the source tarball for docker-selinux
+Source12: https://github.com/fedora-cloud/%{repo}-selinux/archive/%{ds_commit}/%{repo}-selinux-%{ds_shortcommit}.tar.gz
 Patch1:     go-md2man.patch
 Patch3:     codegangsta-cli.patch
 Patch4:     urlparse.patch
 Patch5:     docker-py-remove-lock.patch
 Patch6:     0001-replace-closed-with-fp-isclosed-for-rhel7.patch
-Patch7:     cve.patch
 BuildRequires:  glibc-static
-BuildRequires:  golang >= 1.3.1
+BuildRequires:  golang >= 1.4.2
 BuildRequires:  device-mapper-devel
 BuildRequires:  btrfs-progs-devel
 BuildRequires:  sqlite-devel
@@ -78,11 +98,15 @@ BuildRequires:  pkgconfig(systemd)
 Requires:   systemd
 # need xz to work with ubuntu images
 Requires:   xz
-Requires:   device-mapper-libs >= 1.02.90-1
-#Requires:   subscription-manager
+Requires:   device-mapper-libs >= 7:1.02.90-1
+Requires:   subscription-manager
 Provides:   lxc-docker = %{d_version}-%{d_release}
 Provides:   docker = %{d_version}-%{d_release}
 Provides:   docker-io = %{d_version}-%{d_release}
+
+# RE: rhbz#1195804 - ensure min NVR for selinux-policy
+Requires: selinux-policy >= 3.13.1-23
+Requires(pre): %{repo}-selinux >= %{version}-%{release}
 
 %description
 Docker is an open-source engine that automates the deployment of any
@@ -165,12 +189,28 @@ The atomic host subcommand wraps rpm-ostree, currently just providing a
 friendlier name, but in the future Atomic may provide more unified
 management.
 
+%package selinux
+Summary: SELinux policies for Docker
+BuildRequires: selinux-policy
+BuildRequires: selinux-policy-devel
+Requires(post): selinux-policy-base >= %{selinux_policyver}
+Requires(post): selinux-policy-targeted >= %{selinux_policyver}
+Requires(post): policycoreutils
+Requires(post): policycoreutils-python
+Requires(post): libselinux-utils
+Provides: %{repo}-io-selinux
+
+%description selinux
+SELinux policy modules for use with Docker.
+
 %prep
-%setup -qn docker-%{commit}
+%setup -qn docker-%{d_commit}
 %patch1 -p1
 %patch3 -p1
-%patch7 -p1
 cp %{SOURCE6} .
+
+# unpack %{repo}-selinux
+tar zxf %{SOURCE12}
 
 # untar docker-utils tarball
 tar zxf %{SOURCE11}
@@ -203,7 +243,7 @@ pushd _build
   ln -s $(dirs +1 -l)/docker-utils-%{utils_commit} src/github.com/vbatts/docker-utils
 popd
 
-export DOCKER_GITCOMMIT="%{shortcommit}/%{d_version}"
+export DOCKER_GITCOMMIT="%{d_shortcommit}/%{d_version}"
 export DOCKER_BUILDTAGS='selinux btrfs_noversion'
 export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
 
@@ -212,6 +252,11 @@ sed -i '/rm -r autogen/d' hack/make.sh
 DEBUG=1 hack/make.sh dynbinary
 cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
+
+# build %{repo}-selinux
+pushd %{repo}-selinux-%{ds_commit}
+make SHARE="%{_datadir}" TARGETS="%{modulenames}"
+popd
 
 pushd $(pwd)/_build/src
 # build go-md2man for building manpages
@@ -246,7 +291,7 @@ popd
 %install
 # install binary
 install -d %{buildroot}%{_bindir}
-install -p -m 755 bundles/%{d_version}-dev/dynbinary/docker-%{d_version}-dev %{buildroot}%{_bindir}/docker
+install -p -m 755 bundles/%{d_version}/dynbinary/docker-%{d_version} %{buildroot}%{_bindir}/docker
 
 # install dockertarsum and docker-fetch
 install -p -m 755 _build/src/docker-fetch %{buildroot}%{_bindir}
@@ -254,7 +299,7 @@ install -p -m 755 _build/src/dockertarsum %{buildroot}%{_bindir}
 
 # install dockerinit
 install -d %{buildroot}%{_libexecdir}/docker
-install -p -m 755 bundles/%{d_version}-dev/dynbinary/dockerinit-%{d_version}-dev %{buildroot}%{_libexecdir}/docker/dockerinit
+install -p -m 755 bundles/%{d_version}/dynbinary/dockerinit-%{d_version} %{buildroot}%{_libexecdir}/docker/dockerinit
 
 # install manpages
 install -d %{buildroot}%{_mandir}/man1
@@ -303,17 +348,29 @@ install -p -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/sysconfig/docker
 install -p -m 644 %{SOURCE4} %{buildroot}%{_sysconfdir}/sysconfig/docker-storage
 install -p -m 644 %{SOURCE7} %{buildroot}%{_sysconfdir}/sysconfig/docker-network
 
-# install secrets dir
-#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
-# rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+# install SELinux interfaces
+%_format INTERFACES $x.if
+install -d %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
+install -p -m 644 %{repo}-selinux-%{ds_commit}/$INTERFACES %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
 
-#mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
-mkdir -p %{buildroot}/etc/docker/certs.d/
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
+# install policy modules
+%_format MODULES $x.pp.bz2
+install -d %{buildroot}%{_datadir}/selinux/packages
+install -m 0644 %{repo}-selinux-%{ds_commit}/$MODULES %{buildroot}%{_datadir}/selinux/packages
+
+# remove %{repo}-selinux rpm spec file
+rm -rf %{repo}-selinux-%{ds_commit}/%{repo}-selinux.spec
+
+# install secrets dir
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# rhbz#1110876 - update symlinks for subscription management
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+
+mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
 
 # install docker config directory
 install -dp %{buildroot}%{_sysconfdir}/docker/
@@ -368,11 +425,29 @@ exit 0
 %post
 %systemd_post docker.service
 
+%post selinux
+# Install all modules in a single transaction
+%_format MODULES %{_datadir}/selinux/packages/$x.pp.bz2
+%{_sbindir}/semodule -n -s %{selinuxtype} -i $MODULES
+if %{_sbindir}/selinuxenabled ; then
+%{_sbindir}/load_policy
+%relabel_files
+fi
+
 %preun
 %systemd_preun docker.service
 
 %postun
 %systemd_postun_with_restart docker.service
+
+%postun selinux
+if [ $1 -eq 0 ]; then
+%{_sbindir}/semodule -n -r %{modulenames} &> /dev/null || :
+if %{_sbindir}/selinuxenabled ; then
+%{_sbindir}/load_policy
+%relabel_files
+fi
+fi
 
 %files
 %doc AUTHORS CHANGELOG.md CONTRIBUTING.md MAINTAINERS NOTICE
@@ -380,11 +455,11 @@ exit 0
 %{_mandir}/man1/docker*
 %{_mandir}/man5/*
 %{_bindir}/docker
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
-#%{_datadir}/rhel/secrets/rhsm
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/docker
 %{_unitdir}/docker.service
 %config(noreplace) %{_sysconfdir}/sysconfig/docker
@@ -431,7 +506,68 @@ exit 0
 %{_datadir}/bash-completion/completions/atomic
 %{python_sitelib}/atomic*.egg-info
 
+%files selinux
+%doc %{repo}-selinux-%{ds_commit}/README.md
+%{_datadir}/selinux/*
+
 %changelog
+* Thu Apr 30 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-11
+- build docker @rhatdan/rhel7-1.6 commit#8aae715
+- build atomic @projectatomic/master commit#5b2fa8d (fixes a typo)
+- Resolves: rhbz#1207839
+- Resolves: rhbz#1211765
+- Resolves: rhbz#1209545 (fixed in 1.6.0-10)
+- Resolves: rhbz#1151167 (fixed in 1.6.0-6)
+
+* Tue Apr 28 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-10
+- Resolves: rhbz#1215768
+- Resolves: rhbz#1212579
+- build docker @rhatdan/rhel7-1.6 commit#0852937
+
+* Fri Apr 24 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-9
+- build docker @rhatdan/rhel7-1.6 commit#6a57386
+- fix registry unit test
+
+* Wed Apr 22 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-8
+- build docker @rhatdan/rhel7-1.6 commit#7bd2216
+
+* Tue Apr 21 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-7
+- build docker @rhatdan/rhel7-1.6 commit#c3721ce
+- build atomic master commit#7b136161
+- Resolves: rhbz#1213636
+
+* Fri Apr 17 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-6
+- Rebuilt with golang 1.4.2
+- Resolves: rhbz#1212813
+
+* Fri Apr 17 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-5
+- build docker @rhatdan/rhel7-1.6 commit#9c42d44
+- build docker-selinux master commit#d59539b
+- Resolves: rhbz#1211750
+
+* Thu Apr 16 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-4
+- build docker @rhatdan/rhel7-1.6 commit#c1a573c
+- includes 1.6.0 release + redhat patches
+- include docker-selinux @fedora-cloud/master commit#d74079c
+
+* Thu Apr 16 2015 Michal Minar <miminar@redhat.com> - 1.6.0-3
+- Fixed login command
+- Resolves: rhbz#1212188
+
+* Wed Apr 15 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-2
+- Resolves: rhbz#1211292 - move GOTRACEBACK=crash to unitfile
+- build docker @rhatdan/rhel7-1.6 commit#fed6da1
+- build atomic master commit#e5734c4
+
+* Tue Apr 14 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-1
+- use docker @rhatdan/rhel7-1.6 commit#a8ccea4
+
+* Fri Apr 10 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-30
+- use docker @rhatdan/1.6 commit#24bc1b9
+
+* Fri Mar 27 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-29
+- use docker @rhatdan/1.6 commit#2d06cf9
+
 * Fri Mar 27 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-28
 - Resolves: rhbz#1206443 - CVE-2015-1843
 
@@ -465,6 +601,8 @@ exit 0
 
 * Tue Mar 10 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.5.0-19
 - Resolves: rhbz#1200394 - don't mount /run as tmpfs if mounted as a volume
+- Resolves: rhbz#1187603 - 'atomic run' no longer ignores new image if
+container still exists
 - build docker rhatdan/1.5.0 commit#5992901
 - no rpm change, ensure release tags in changelogs are consistent
 
