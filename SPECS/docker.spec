@@ -99,7 +99,7 @@ Requires:   systemd
 # need xz to work with ubuntu images
 Requires:   xz
 Requires:   device-mapper-libs >= 7:1.02.90-1
-Requires:   subscription-manager
+#Requires:   subscription-manager
 Provides:   lxc-docker = %{d_version}-%{d_release}
 Provides:   docker = %{d_version}-%{d_release}
 Provides:   docker-io = %{d_version}-%{d_release}
@@ -362,15 +362,16 @@ install -m 0644 %{repo}-selinux-%{ds_commit}/$MODULES %{buildroot}%{_datadir}/se
 rm -rf %{repo}-selinux-%{ds_commit}/%{repo}-selinux.spec
 
 # install secrets dir
-install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
+#mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
+mkdir -p %{buildroot}/etc/docker/certs.d/
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
 
 # install docker config directory
 install -dp %{buildroot}%{_sysconfdir}/docker/
@@ -455,11 +456,11 @@ fi
 %{_mandir}/man1/docker*
 %{_mandir}/man5/*
 %{_bindir}/docker
-%dir %{_datadir}/rhel
-%dir %{_datadir}/rhel/secrets
-%{_datadir}/rhel/secrets/etc-pki-entitlement
-%{_datadir}/rhel/secrets/rhel7.repo
-%{_datadir}/rhel/secrets/rhsm
+#%dir %{_datadir}/rhel
+#%dir %{_datadir}/rhel/secrets
+#%{_datadir}/rhel/secrets/etc-pki-entitlement
+#%{_datadir}/rhel/secrets/rhel7.repo
+#%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/docker
 %{_unitdir}/docker.service
 %config(noreplace) %{_sysconfdir}/sysconfig/docker
