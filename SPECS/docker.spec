@@ -23,7 +23,7 @@
 %global repo            docker
 %global common_path     %{provider}.%{provider_tld}/%{project}
 %global d_version       1.6.0
-%global d_release       11
+%global d_release       11.0.1
 
 %global import_path                 %{common_path}/%{repo}
 %global import_path_libcontainer    %{common_path}/libcontainer
@@ -512,6 +512,10 @@ fi
 %{_datadir}/selinux/*
 
 %changelog
+* Wed May 13 2015 Johnny Hughes <johnyn@centos.org> - 1.6.0-11.0.1
+- comment out rh registry in docker.sysconfig source file
+- Debrand for CentOS
+
 * Thu Apr 30 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-11
 - build docker @rhatdan/rhel7-1.6 commit#8aae715
 - build atomic @projectatomic/master commit#5b2fa8d (fixes a typo)
