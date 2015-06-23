@@ -548,6 +548,9 @@ fi
 %{_datadir}/selinux/*
 
 %changelog
+* Tue Jun 23 2015 CentOS Sources <bugs@centos.org> - 1.6.2-14.el7.centos
+- comment out rh registry in docker.sysconfig
+
 * Mon Jun 15 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-14
 - Resolves: rhbz#1218639, rhbz#1225556 (unresolved in -11)
 - build docker @lsm5/rhel7-1.6 commit#ba1f6c3
