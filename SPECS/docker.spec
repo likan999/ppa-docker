@@ -9,11 +9,11 @@
 %global w_distname websocket-client
 %global w_eggname websocket_client
 %global w_version 0.14.1
-%global w_release 78
+%global w_release 97
 
 # for docker-python, prefix with dp_
 %global dp_version 1.0.0
-%global dp_release 35
+%global dp_release 53
 
 #debuginfo not supported with Go
 %global debug_package   %{nil}
@@ -22,28 +22,33 @@
 %global project         docker
 %global repo            docker
 %global common_path     %{provider}.%{provider_tld}/%{project}
-%global d_version       1.6.0
-%global d_release       11.0.1
+%global d_version       1.6.2
+%global d_release       14
 
 %global import_path                 %{common_path}/%{repo}
 %global import_path_libcontainer    %{common_path}/libcontainer
 
-%global d_commit      8aae715d99d7fdeaed1c8043e789d3620520ffef
+%global d_commit      ba1f6c3a8973725dcc97298aecb367ad5498955b
 %global d_shortcommit %(c=%{d_commit}; echo ${c:0:7})
 
-%global atomic_commit 5b2fa8d261fc3392b44c50b631d586724f517138
+%global atomic_commit f863afd9ae0db92912129ae25e93211263b77c2d
 %global atomic_shortcommit %(c=%{atomic_commit}; echo ${c:0:7})
-%global atomic_release 22
+%global atomic_release 40
 
-%global utils_commit dcb4518b69b2071385089290bc75c63e5251fcba
+%global utils_commit 562e2c0f7748d4c4db556cb196354a5805bf2119
 
 # docker-selinux stuff (prefix with ds_ for version/release etc.)
 # Some bits borrowed from the openstack-selinux package
-%global ds_commit d59539be7eba77297e044fdc5de871f7ceaf15a3
+%global ds_commit 9c089c6c85d2fd05b4cdf7dff6bfba075ee99c49
 %global ds_shortcommit %(c=%{ds_commit}; echo ${c:0:7})
 %global selinuxtype targeted
 %global moduletype services
 %global modulenames %{repo}
+
+# docker-storage-setup stuff (prefix with dss_ for version/release etc.)
+%global dss_libdir %{_prefix}/lib/docker-storage-setup
+%global dss_commit eefbef7c0dd7315e55664aff298e7214807f4c0c
+%global dss_shortcommit %(c=%{dss_commit}; echo ${c:0:7})
 
 # Usage: _format var format
 # Expand 'modulenames' into various formats as needed
@@ -65,8 +70,8 @@ URL:        http://www.docker.com
 # only x86_64 for now: https://github.com/docker/docker/issues/136
 ExclusiveArch:  x86_64
 #Source0:    https://%{import_path}/archive/v%{version}.tar.gz
-# Branch used available at https://github.com/rhatdan/docker/commits/rhel7-1.6
-Source0:    https://github.com/rhatdan/docker/archive/%{d_commit}.tar.gz
+# Branch used available at https://github.com/lsm5/docker/commits/rhel7-1.6
+Source0:    https://github.com/lsm5/docker/archive/%{d_commit}.tar.gz
 Source1:    docker.service
 Source3:    docker.sysconfig
 Source4:    docker-storage.sysconfig
@@ -83,6 +88,8 @@ Source10:   https://github.com/projectatomic/atomic/archive/%{atomic_commit}.tar
 Source11:   https://github.com/vbatts/docker-utils/archive/%{utils_commit}.tar.gz
 # Source12 is the source tarball for docker-selinux
 Source12: https://github.com/fedora-cloud/%{repo}-selinux/archive/%{ds_commit}/%{repo}-selinux-%{ds_shortcommit}.tar.gz
+# Source13 is the source tarball for docker-storage-setup
+Source13: https://github.com/a13m/docker-storage-setup/archive/%{dss_commit}/%{repo}-storage-setup-%{dss_shortcommit}.tar.gz
 Patch1:     go-md2man.patch
 Patch3:     codegangsta-cli.patch
 Patch4:     urlparse.patch
@@ -95,11 +102,13 @@ BuildRequires:  btrfs-progs-devel
 BuildRequires:  sqlite-devel
 BuildRequires:  pkgconfig(systemd)
 # appropriate systemd version as per rhbz#1171054
-Requires:   systemd
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires:   xz
 Requires:   device-mapper-libs >= 7:1.02.90-1
-#Requires:   subscription-manager
+Requires:   subscription-manager
 Provides:   lxc-docker = %{d_version}-%{d_release}
 Provides:   docker = %{d_version}-%{d_release}
 Provides:   docker-io = %{d_version}-%{d_release}
@@ -107,6 +116,10 @@ Provides:   docker-io = %{d_version}-%{d_release}
 # RE: rhbz#1195804 - ensure min NVR for selinux-policy
 Requires: selinux-policy >= 3.13.1-23
 Requires(pre): %{repo}-selinux >= %{version}-%{release}
+
+# rhbz#1214070 - update deps for d-s-s
+Requires: lvm2 >= 2.02.112
+Requires: xfsprogs
 
 %description
 Docker is an open-source engine that automates the deployment of any
@@ -152,7 +165,7 @@ BuildRequires:  python-tools
 BuildRequires:  python-requests
 Requires:       docker >= %{d_version}-%{d_release}
 Requires:       python-requests
-Requires:       python-%{w_distname} >= 0.11.0
+Requires:       python-%{w_distname} >= %{w_version}-%{w_release}
 Requires:       python-six >= 1.3.0
 Requires:       python-argparse
 Provides:       python-docker-py = %{dp_version}-%{dp_release}
@@ -174,7 +187,7 @@ BuildRequires: python-requests
 Requires: docker
 Requires: python-requests
 Requires: python-docker-py >= %{dp_version}-%{dp_release}
-Requires: python-%{w_distname} >= 0.11.0
+Requires: python-%{w_distname} >= %{w_version}-%{w_release}
 Requires: python-six >= 1.3.0
 Conflicts: python-docker < 1.0.0-11
 
@@ -233,6 +246,9 @@ popd
 tar zxf %{SOURCE10}
 sed -i '/pylint/d' atomic-%{atomic_commit}/Makefile
 sed -i 's/go-md2man/.\/go-md2man/' atomic-%{atomic_commit}/Makefile
+
+# untar d-s-s
+tar zxf %{SOURCE13}
 
 %build
 mkdir _build
@@ -332,8 +348,8 @@ install -d %{buildroot}%{_datadir}/zsh/site-functions
 install -p -m 644 contrib/completion/zsh/_docker %{buildroot}%{_datadir}/zsh/site-functions
 
 # install udev rules
-install -d %{buildroot}%{_prefix}/lib/udev/rules.d
-install -p -m 755 contrib/udev/80-docker.rules %{buildroot}%{_prefix}/lib/udev/rules.d
+install -d %{buildroot}%{_udevrulesdir}
+install -p -m 755 contrib/udev/80-docker.rules %{buildroot}%{_udevrulesdir}
 
 # install storage dir
 install -d -m 700 %{buildroot}%{_sharedstatedir}/docker
@@ -362,16 +378,15 @@ install -m 0644 %{repo}-selinux-%{ds_commit}/$MODULES %{buildroot}%{_datadir}/se
 rm -rf %{repo}-selinux-%{ds_commit}/%{repo}-selinux.spec
 
 # install secrets dir
-#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-#mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
-mkdir -p %{buildroot}/etc/docker/certs.d/
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
+mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
 
 # install docker config directory
 install -dp %{buildroot}%{_sysconfdir}/docker/
@@ -405,8 +420,20 @@ pushd atomic-%{atomic_commit}
 make install DESTDIR=%{buildroot}
 popd
 
+# install docker-storage-setup
+pushd %{repo}-storage-setup-%{dss_commit}
+install -d %{buildroot}%{_bindir}
+install -p -m 755 docker-storage-setup.sh %{buildroot}%{_bindir}/docker-storage-setup
+install -d %{buildroot}%{_unitdir}
+install -p -m 644 docker-storage-setup.service %{buildroot}%{_unitdir}
+install -d %{buildroot}%{dss_libdir}
+install -p -m 644 docker-storage-setup.conf %{buildroot}%{dss_libdir}/docker-storage-setup
+install -d %{buildroot}%{_mandir}/man1
+install -p -m 644 docker-storage-setup.1 %{buildroot}%{_mandir}/man1
+popd
+
 %check
-[ ! -e /run/docker.sock ] || {
+[ ! -w /run/docker.sock ] || {
     mkdir test_dir
     pushd test_dir
     git clone https://%{import_path}
@@ -456,11 +483,11 @@ fi
 %{_mandir}/man1/docker*
 %{_mandir}/man5/*
 %{_bindir}/docker
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
-#%{_datadir}/rhel/secrets/rhsm
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/docker
 %{_unitdir}/docker.service
 %config(noreplace) %{_sysconfdir}/sysconfig/docker
@@ -468,7 +495,7 @@ fi
 %config(noreplace) %{_sysconfdir}/sysconfig/docker-network
 %{_datadir}/bash-completion/completions/docker
 %dir %{_sharedstatedir}/docker
-%{_prefix}/lib/udev/rules.d/80-docker.rules
+%{_udevrulesdir}/80-docker.rules
 %dir %{_datadir}/fish/vendor_completions.d/
 %{_datadir}/fish/vendor_completions.d/docker.fish
 %dir %{_datadir}/vim/vimfiles/doc
@@ -482,6 +509,10 @@ fi
 %{_sysconfdir}/docker
 %{_bindir}/docker-fetch
 %{_bindir}/dockertarsum
+# docker-storage-setup specific
+%{_unitdir}/docker-storage-setup.service
+%{_bindir}/docker-storage-setup
+%{dss_libdir}/docker-storage-setup
 
 %files logrotate
 %doc README.docker-logrotate
@@ -502,19 +533,105 @@ fi
 %doc atomic-%{atomic_commit}/COPYING atomic-%{atomic_commit}/README.md
 %config(noreplace) %{_sysconfdir}/sysconfig/atomic
 %{_sysconfdir}/profile.d/atomic.sh
+%{_sysconfdir}/dbus-1/system.d/org.atomic.conf
 %{_bindir}/atomic
 %{_mandir}/man1/atomic*
 %{_datadir}/bash-completion/completions/atomic
+%{_datadir}/atomic
+%{_datadir}/dbus-1/system-services/org.atomic.service
+%{_datadir}/polkit-1/actions/org.atomic.policy
 %{python_sitelib}/atomic*.egg-info
+%{python_sitelib}/Atomic
 
 %files selinux
 %doc %{repo}-selinux-%{ds_commit}/README.md
 %{_datadir}/selinux/*
 
 %changelog
-* Wed May 13 2015 Johnny Hughes <johnyn@centos.org> - 1.6.0-11.0.1
-- comment out rh registry in docker.sysconfig source file
-- Debrand for CentOS
+* Mon Jun 15 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-14
+- Resolves: rhbz#1218639, rhbz#1225556 (unresolved in -11)
+- build docker @lsm5/rhel7-1.6 commit#ba1f6c3
+
+* Mon Jun 15 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-13
+- Resolves: rhbz#1222453
+
+* Mon Jun 15 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-12
+- build docker-selinux master commit#9c089c6
+
+* Mon Jun 15 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-11
+- Resolves: rhbz#1231936 (clone of fedora rhbz#1231134), rhbz#1225556, rhbz#1215819
+- build docker @rhatdan/rhel7-1.6 commit#7b32c6c
+
+* Wed Jun 10 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-10
+- correct typo
+
+* Wed Jun 10 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-9
+- Resolves: rhbz#1214070 - update d-s-s related deps
+- Resolves: rhbz#1229374 - use prior existing metadata volume if any
+- Resolves: rhbz#1230192 (include d-s-s master commit#eefbef7)
+- build docker @rhatdan/rhel7-1.6 commit#b79465d
+
+* Mon Jun 08 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-8
+- Resolves: rhbz#1229319 - do not claim /run/secrets
+- Resolves: rhbz#1228167
+- build docker rhatdan/rhel7-1.6 commit#ac7d43f
+- build atomic master commit#f863afd
+
+* Thu Jun 04 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-7
+- Resolves: rhbz#1228397 - install manpage for d-s-s
+- Resolves: rhbz#1228459 - solve 'Permission denied' error for d-s-s
+- Resolves: rhbz#1228685 - don't append dist tag to docker version
+(revert change in 1.6.2-4)
+
+* Tue Jun 02 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-6
+- build docker rhatdan/rhel7-1.6 commit#f1561f6
+
+* Tue Jun 02 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-5
+- build docker-selinux master commit#99c4c77
+- build atomic master commit#2f1398c
+- include docker-storage-setup in docker itself, no subpackage created
+- docker.service Wants=docker-storage-setup.service
+
+* Mon Jun 01 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-4
+- include dist tag in 'docker version' to tell a distro build from a docker
+upstream rpm
+
+* Mon Jun 01 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-3
+- Resolves: rhbz#1226989 - correct install path for docker-stroage-setup
+config file
+- Resolves: rhbz#1227040 - docker requires docker-storage-setup at runtime
+- built docker @rhatdan/rhel7-1.6 commit#a615a49
+- built atomic master commit#2f1398c
+- built d-s-s master commit#0f2b772
+
+* Thu May 28 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-2
+- build docker @rhatdan/rhel7-1.6 commit#175dd9c
+
+* Thu May 28 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-1
+- Resolves: rhbz#1225965 - rebase to 1.6.2
+- Resolves: rhbz#1226320, rhbz#1225549, rhbz#1225556
+- Resolves: rhbz#1219705 - CVE-2015-3627
+- Resolves: rhbz#1219701 - CVE-2015-3629
+- Resolves: rhbz#1219709 - CVE-2015-3630
+- Resolves: rhbz#1219713 - CVE-2015-3631
+- build docker @rhatdan/rhel7-1.6 commit#d8675b5
+- build atomic master commit#ec592be
+- build docker-selinux master commit#e86b2bc
+
+* Tue May 26 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-15
+- d-s-s br: pkgconfig(systemd)
+- Resolves: rhbz#1214070 enforce min NVR for lvm2
+
+* Tue May 26 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-14
+- build atomic master commit#cc9aed4
+- build docker-utils master commit#562e2c0
+- build docker-selinux master commit#ba1ff3c
+- include docker-storage-setup subpackage, use master commit#e075395
+- Resolves: rhbz#1216095
+
+* Mon May 25 2015 Michal Minar <miminar@redhat.com> - 1.6.0-13
+- Remove all repositories when removing image by ID.
+- Resolves: #1222784
 
 * Thu Apr 30 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.0-11
 - build docker @rhatdan/rhel7-1.6 commit#8aae715

@@ -1,6 +1,7 @@
-SOURCES/5b2fa8d261fc3392b44c50b631d586724f517138.tar.gz
-SOURCES/8aae715d99d7fdeaed1c8043e789d3620520ffef.tar.gz
-SOURCES/dcb4518b69b2071385089290bc75c63e5251fcba.tar.gz
+SOURCES/562e2c0f7748d4c4db556cb196354a5805bf2119.tar.gz
+SOURCES/ba1f6c3a8973725dcc97298aecb367ad5498955b.tar.gz
 SOURCES/docker-py-1.0.0.tar.gz
-SOURCES/docker-selinux-d59539b.tar.gz
+SOURCES/docker-selinux-9c089c6.tar.gz
+SOURCES/docker-storage-setup-eefbef7.tar.gz
+SOURCES/f863afd9ae0db92912129ae25e93211263b77c2d.tar.gz
 SOURCES/websocket-client-0.14.1.tar.gz
