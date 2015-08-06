@@ -1,3 +1,4 @@
+%global with_unit_test 1
 # modifying the dockerinit binary breaks the SHA1 sum check by docker
 %global __os_install_post %{_rpmconfigdir}/brp-compress
 
@@ -9,11 +10,11 @@
 %global w_distname websocket-client
 %global w_eggname websocket_client
 %global w_version 0.14.1
-%global w_release 97
 
 # for docker-python, prefix with dp_
-%global dp_version 1.0.0
-%global dp_release 53
+%global dp_version 1.4.0
+%global dp_commit 54a154d8b251df5e4788570dac4bea3cfa70b199
+%global dp_shortcommit %(c=%{dp_commit}; echo ${c:0:7})
 
 #debuginfo not supported with Go
 %global debug_package   %{nil}
@@ -22,24 +23,22 @@
 %global project         docker
 %global repo            docker
 %global common_path     %{provider}.%{provider_tld}/%{project}
-%global d_version       1.6.2
-%global d_release       14
+%global d_version       1.7.1
 
 %global import_path                 %{common_path}/%{repo}
 %global import_path_libcontainer    %{common_path}/libcontainer
 
-%global d_commit      ba1f6c3a8973725dcc97298aecb367ad5498955b
+%global d_commit 30430018c3d8c14afc1c843a781fffe8e0b35355
 %global d_shortcommit %(c=%{d_commit}; echo ${c:0:7})
 
-%global atomic_commit f863afd9ae0db92912129ae25e93211263b77c2d
+%global atomic_commit a4442c43f166b836595b9d85545d7511716ee0da
 %global atomic_shortcommit %(c=%{atomic_commit}; echo ${c:0:7})
-%global atomic_release 40
 
-%global utils_commit 562e2c0f7748d4c4db556cb196354a5805bf2119
+%global utils_commit dab51acd1b1a77f7cb01a1b7e2129ec85c846b71
 
 # docker-selinux stuff (prefix with ds_ for version/release etc.)
 # Some bits borrowed from the openstack-selinux package
-%global ds_commit 9c089c6c85d2fd05b4cdf7dff6bfba075ee99c49
+%global ds_commit bebf349f6e66c10f8010446a6b3440e43311a8ff
 %global ds_shortcommit %(c=%{ds_commit}; echo ${c:0:7})
 %global selinuxtype targeted
 %global moduletype services
@@ -47,7 +46,7 @@
 
 # docker-storage-setup stuff (prefix with dss_ for version/release etc.)
 %global dss_libdir %{_prefix}/lib/docker-storage-setup
-%global dss_commit eefbef7c0dd7315e55664aff298e7214807f4c0c
+%global dss_commit b15239869d789e86a279edae5479fd25a988bf78
 %global dss_shortcommit %(c=%{dss_commit}; echo ${c:0:7})
 
 # Usage: _format var format
@@ -63,15 +62,16 @@
 
 Name:       docker
 Version:    %{d_version}
-Release:    %{d_release}%{?dist}
+Release:    108%{?dist}
 Summary:    Automates deployment of containerized applications
 License:    ASL 2.0
 URL:        http://www.docker.com
 # only x86_64 for now: https://github.com/docker/docker/issues/136
 ExclusiveArch:  x86_64
 #Source0:    https://%{import_path}/archive/v%{version}.tar.gz
-# Branch used available at https://github.com/lsm5/docker/commits/rhel7-1.6
-Source0:    https://github.com/lsm5/docker/archive/%{d_commit}.tar.gz
+# Branch used available at
+# https://github.com/rhatdan/docker/commits/rhel7-1.7
+Source0:    https://github.com/rhatdan/docker/archive/%{d_commit}.tar.gz
 Source1:    docker.service
 Source3:    docker.sysconfig
 Source4:    docker-storage.sysconfig
@@ -81,7 +81,7 @@ Source7:    docker-network.sysconfig
 # Source8 is the source tarball for python-websocket-client
 Source8:    http://pypi.python.org/packages/source/w/%{w_distname}/%{w_distname}-%{w_version}.tar.gz
 # Source9 is the source tarball for docker-py
-Source9:    http://pypi.python.org/packages/source/d/docker-py/docker-py-%{dp_version}.tar.gz
+Source9:    http://github.com/rhatdan/docker-py/archive/%{dp_commit}.tar.gz
 # Source10 is the source tarball for atomic
 Source10:   https://github.com/projectatomic/atomic/archive/%{atomic_commit}.tar.gz
 # Source11 is the source tarball for dockertarsum and docker-fetch
@@ -90,11 +90,12 @@ Source11:   https://github.com/vbatts/docker-utils/archive/%{utils_commit}.tar.g
 Source12: https://github.com/fedora-cloud/%{repo}-selinux/archive/%{ds_commit}/%{repo}-selinux-%{ds_shortcommit}.tar.gz
 # Source13 is the source tarball for docker-storage-setup
 Source13: https://github.com/a13m/docker-storage-setup/archive/%{dss_commit}/%{repo}-storage-setup-%{dss_shortcommit}.tar.gz
-Patch1:     go-md2man.patch
-Patch3:     codegangsta-cli.patch
-Patch4:     urlparse.patch
-Patch5:     docker-py-remove-lock.patch
-Patch6:     0001-replace-closed-with-fp-isclosed-for-rhel7.patch
+Patch1: go-md2man.patch
+Patch3: codegangsta-cli.patch
+Patch4: urlparse.patch
+Patch5: docker-py-remove-lock.patch
+Patch6: 0001-Rework-patch-for-rhbz-1194445.patch
+Patch7: 0001-atomic.sysconfig-use-rhel-tools-as-the-TOOLSIMG.patch
 BuildRequires:  glibc-static
 BuildRequires:  golang >= 1.4.2
 BuildRequires:  device-mapper-devel
@@ -108,10 +109,10 @@ Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires:   xz
 Requires:   device-mapper-libs >= 7:1.02.90-1
-#Requires:   subscription-manager
-Provides:   lxc-docker = %{d_version}-%{d_release}
-Provides:   docker = %{d_version}-%{d_release}
-Provides:   docker-io = %{d_version}-%{d_release}
+Requires:   subscription-manager
+Provides:   lxc-docker = %{d_version}-%{release}
+Provides:   docker = %{d_version}-%{release}
+Provides:   docker-io = %{d_version}-%{release}
 
 # RE: rhbz#1195804 - ensure min NVR for selinux-policy
 Requires: selinux-policy >= 3.13.1-23
@@ -131,10 +132,18 @@ and between virtually any server. The same container that a developer builds
 and tests on a laptop will run at scale, in production*, on VMs, bare-metal
 servers, OpenStack clusters, public instances, or combinations of the above.
 
+%if 0%{?with_unit_test}
+%package unit-test
+Summary: %{summary} - for running unit tests
+
+%description unit-test
+%{summary} - for running unit tests
+%endif
+
 %package logrotate
 Summary:    cron job to run logrotate on docker containers
-Requires:   docker = %{d_version}-%{d_release}
-Provides:   docker-io-logrotate = %{d_version}-%{d_release}
+Requires:   docker = %{d_version}-%{release}
+Provides:   docker-io-logrotate = %{d_version}-%{release}
 
 %description logrotate
 This package installs %{summary}. logrotate is assumed to be installed on
@@ -143,7 +152,6 @@ containers for this to work, failures are silently ignored.
 %package -n python-%{w_distname}
 Summary:    WebSocket client for python
 Version:    %{w_version}
-Release:    %{w_release}%{?dist}
 License:    LGPLv2
 BuildArch:  noarch
 
@@ -156,27 +164,25 @@ python-websocket-client supports only hybi-13.
 
 %package python
 Version:        %{dp_version}
-Release:        %{dp_release}%{?dist}
 License:        ASL 2.0
 Summary:        An API client for docker written in Python
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
 BuildRequires:  python-tools
 BuildRequires:  python-requests
-Requires:       docker >= %{d_version}-%{d_release}
+Requires:       docker >= %{d_version}-%{release}
 Requires:       python-requests
-Requires:       python-%{w_distname} >= %{w_version}-%{w_release}
+Requires:       python-%{w_distname} >= %{w_version}-%{release}
 Requires:       python-six >= 1.3.0
 Requires:       python-argparse
-Provides:       python-docker-py = %{dp_version}-%{dp_release}
-Provides:       python-docker = %{dp_version}-%{dp_release}
+Provides:       python-docker-py = %{dp_version}-%{release}
+Provides:       python-docker = %{dp_version}-%{release}
 
 %description python
 %{summary}
 
 %package -n atomic
-Version: 0
-Release: 0.%{atomic_release}.git%{atomic_shortcommit}%{?dist}
+Version: 1.0
 Summary: Tool for managing ProjectAtomic systems and containers
 License: LGPLv2+
 ExclusiveArch: x86_64
@@ -186,8 +192,8 @@ BuildRequires: python-tools
 BuildRequires: python-requests
 Requires: docker
 Requires: python-requests
-Requires: python-docker-py >= %{dp_version}-%{dp_release}
-Requires: python-%{w_distname} >= %{w_version}-%{w_release}
+Requires: python-docker-py >= %{dp_version}-%{release}
+Requires: python-%{w_distname} >= %{w_version}-%{release}
 Requires: python-six >= 1.3.0
 Conflicts: python-docker < 1.0.0-11
 
@@ -237,15 +243,18 @@ popd
 
 # untar docker-py tarball
 tar zxf %{SOURCE9}
-pushd docker-py-%{dp_version}
+pushd docker-py-%{dp_commit}
 %patch5 -p1
 %patch6 -p1
 popd
 
 # untar atomic
 tar zxf %{SOURCE10}
-sed -i '/pylint/d' atomic-%{atomic_commit}/Makefile
-sed -i 's/go-md2man/.\/go-md2man/' atomic-%{atomic_commit}/Makefile
+pushd atomic-%{atomic_commit}
+sed -i '/pylint/d' Makefile
+sed -i 's/go-md2man/.\/go-md2man/' Makefile
+%patch7 -p1
+popd
 
 # untar d-s-s
 tar zxf %{SOURCE13}
@@ -277,17 +286,17 @@ popd
 pushd $(pwd)/_build/src
 # build go-md2man for building manpages
 go build github.com/cpuguy83/go-md2man
-# build dockertarsum and docker-fetch(commented out, doesn't build)
+# build dockertarsum and docker-fetch
 go build github.com/vbatts/docker-utils/cmd/docker-fetch
 go build github.com/vbatts/docker-utils/cmd/dockertarsum
 popd
 
-cp _build/src/go-md2man docs/man/.
+cp _build/src/go-md2man man/.
 cp _build/src/go-md2man atomic-%{atomic_commit}/.
 
-sed -i 's/go-md2man/.\/go-md2man/' docs/man/md2man-all.sh
+sed -i 's/go-md2man/.\/go-md2man/' man/md2man-all.sh
 # build docker manpages
-docs/man/md2man-all.sh
+man/md2man-all.sh
 
 # build python-websocket-client
 pushd %{w_distname}-%{w_version}
@@ -295,7 +304,7 @@ pushd %{w_distname}-%{w_version}
 popd
 
 # build docker-py
-pushd docker-py-%{dp_version}
+pushd docker-py-%{dp_commit}
 %{__python} setup.py build
 popd
 
@@ -319,9 +328,9 @@ install -p -m 755 bundles/%{d_version}/dynbinary/dockerinit-%{d_version} %{build
 
 # install manpages
 install -d %{buildroot}%{_mandir}/man1
-install -p -m 644 docs/man/man1/* %{buildroot}%{_mandir}/man1
+install -p -m 644 man/man1/* %{buildroot}%{_mandir}/man1
 install -d %{buildroot}%{_mandir}/man5
-install -p -m 644 docs/man/man5/* %{buildroot}%{_mandir}/man5
+install -p -m 644 man/man5/* %{buildroot}%{_mandir}/man5
 
 # install bash completion
 install -d %{buildroot}%{_datadir}/bash-completion/completions/
@@ -374,20 +383,29 @@ install -p -m 644 %{repo}-selinux-%{ds_commit}/$INTERFACES %{buildroot}%{_datadi
 install -d %{buildroot}%{_datadir}/selinux/packages
 install -m 0644 %{repo}-selinux-%{ds_commit}/$MODULES %{buildroot}%{_datadir}/selinux/packages
 
+%if 0%{?with_unit_test}
+install -d -m 0755 %{buildroot}%{_sharedstatedir}/docker-unit-test/
+cp -pav VERSION Dockerfile %{buildroot}%{_sharedstatedir}/docker-unit-test/.
+for d in api builder cliconfig contrib daemon graph hack image integration-cli links nat opts pkg registry runconfig trust utils vendor volume; do
+  cp -a $d %{buildroot}%{_sharedstatedir}/docker-unit-test/
+done
+# remove docker.initd as it requires /sbin/runtime no packages in Fedora
+rm -rf %{buildroot}%{_sharedstatedir}/docker-unit-test/contrib/init/openrc/docker.initd
+%endif
+
 # remove %{repo}-selinux rpm spec file
 rm -rf %{repo}-selinux-%{ds_commit}/%{repo}-selinux.spec
 
 # install secrets dir
-#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-#mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
-mkdir -p %{buildroot}/etc/docker/certs.d/
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
+mkdir -p %{buildroot}/etc/docker/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/docker/certs.d/redhat.io/redhat-ca.crt
 
 # install docker config directory
 install -dp %{buildroot}%{_sysconfdir}/docker/
@@ -412,7 +430,7 @@ find %{buildroot}/%{python2_sitelib} -type f -exec chmod -x {} \;
 popd
 
 # install docker-py
-pushd docker-py-%{dp_version}
+pushd docker-py-%{dp_commit}
 %{__python} setup.py install --root %{buildroot}
 popd
 
@@ -429,6 +447,8 @@ install -d %{buildroot}%{_unitdir}
 install -p -m 644 docker-storage-setup.service %{buildroot}%{_unitdir}
 install -d %{buildroot}%{dss_libdir}
 install -p -m 644 docker-storage-setup.conf %{buildroot}%{dss_libdir}/docker-storage-setup
+install -d %{buildroot}%{_sysconfdir}/sysconfig
+install -p -m 644 docker-storage-setup-override.conf %{buildroot}%{_sysconfdir}/sysconfig/docker-storage-setup
 install -d %{buildroot}%{_mandir}/man1
 install -p -m 644 docker-storage-setup.1 %{buildroot}%{_mandir}/man1
 popd
@@ -484,11 +504,11 @@ fi
 %{_mandir}/man1/docker*
 %{_mandir}/man5/*
 %{_bindir}/docker
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
-#%{_datadir}/rhel/secrets/rhsm
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/docker
 %{_unitdir}/docker.service
 %config(noreplace) %{_sysconfdir}/sysconfig/docker
@@ -514,6 +534,12 @@ fi
 %{_unitdir}/docker-storage-setup.service
 %{_bindir}/docker-storage-setup
 %{dss_libdir}/docker-storage-setup
+%config(noreplace) %{_sysconfdir}/sysconfig/docker-storage-setup
+
+%if 0%{?with_unit_test}
+%files unit-test
+%{_sharedstatedir}/docker-unit-test/
+%endif
 
 %files logrotate
 %doc README.docker-logrotate
@@ -526,9 +552,9 @@ fi
 %{_bindir}/wsdump
 
 %files python
-%doc docker-py-%{dp_version}/{LICENSE,README.md}
+%doc docker-py-%{dp_commit}/{LICENSE,README.md}
 %{python_sitelib}/docker
-%{python_sitelib}/docker_py-%{dp_version}-py2*.egg-info
+%{python_sitelib}/docker_py-%{dp_version}*
 
 %files -n atomic
 %doc atomic-%{atomic_commit}/COPYING atomic-%{atomic_commit}/README.md
@@ -549,8 +575,69 @@ fi
 %{_datadir}/selinux/*
 
 %changelog
-* Tue Jun 23 2015 CentOS Sources <bugs@centos.org> - 1.6.2-14.el7.centos
-- comment out rh registry in docker.sysconfig
+* Tue Jul 28 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.1-108
+- built docker @rhatdan/rhel7-1.7 commit#3043001
+- built docker-py @rhatdan/master commit#54a154d
+- built d-s-s master commit#b152398
+- built atomic master commit#a4442c4
+- built docker-selinux master commit#bebf349
+- built docker-utils master commit#dab51ac
+
+* Fri Jul 24 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.1-107
+- built docker @rhatdan/rhel7-1.7 commit#3043001
+- built docker-py @rhatdan/master commit#54a154d
+- built d-s-s master commit#b152398
+- built atomic master commit#52d695c
+- built docker-selinux master commit#bebf349
+
+* Thu Jul 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.1-106
+- built docker @rhatdan/rhel7-1.7 commit#3043001
+- built docker-py @rhatdan/master commit#54a154d
+- built d-s-s master commit#b152398
+- built atomic master commit#52d695c
+- built docker-selinux master commit#bebf349
+
+* Thu Jul 23 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.1-105
+- Resolves: rhbz#1245325
+- built docker @rhatdan/rhel7-1.7 commit#ac162a3
+- built docker-py @rhatdan/master commit#54a154d
+- built d-s-s master commit#b152398
+- built atomic master commit#ac162a3
+- built docker-selinux master commit#ac162a3
+- disable dockerfetch and dockertarsum
+
+* Wed Jul 22 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.1-104
+- use a common release tag for all subpackages, much easier to update via
+rpmdev-bumpspec
+
+* Wed Jul 22 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.1-1
+- built docker @rhatdan/rhel7-1.7 commit#d2fbc0b
+- built docker-py @rhatdan/master commit#54a154d
+- built d-s-s master commit#b152398
+- built atomic master commit#d2fbc0b
+- built docker-selinux master commit#d2fbc0b
+
+* Fri Jul 17 2015 Jonathan Lebon <jlebon@redhat.com> - 1.7.0-5
+- Add patch for atomic.sysconfig
+- Related: https://github.com/projectatomic/atomic/pull/94
+
+* Wed Jul 15 2015 Jan Chaloupka <jchaloup@redhat.com> - 1.7.0-3.1
+- Add unit-test subpackage
+
+* Thu Jul 09 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.0-3
+- built docker @rhatdan/rhel7-1.7 commit#4740812
+
+* Wed Jul 08 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.0-2
+- increment all release tags to make koji happy
+
+* Wed Jul 08 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.0-1
+- Resolves: rhbz#1241186 - rebase to v1.7.0 + rh patches
+- built docker @rhatdan/rhel7-1.7 commit#0f235fc
+- built docker-selinux master commit#bebf349
+- built d-s-s master commit#e9c3a4c
+- built atomic master commit#f133684
+- rebase python-docker-py to upstream v1.2.3
+- disable docker-fetch for now, doesn't build
 
 * Mon Jun 15 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.6.2-14
 - Resolves: rhbz#1218639, rhbz#1225556 (unresolved in -11)
