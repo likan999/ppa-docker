@@ -580,6 +580,9 @@ fi
 %{_datadir}/selinux/*
 
 %changelog
+* Tue Sep 15 2015 CentOS Sources <bugs@centos.org> - 1.7.1-115.el7.centos
+- comment out rh registry in docker.sysconfig
+
 * Thu Aug 27 2015 Lokesh Mandvekar <lsm5@redhat.com> - 1.7.1-115
 - Resolves: rhbz#1252421
 - built docker @rhatdan/rhel7-1.7 commit#446ad9b
