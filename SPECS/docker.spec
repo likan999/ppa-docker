@@ -14,14 +14,14 @@
 %global import_path %{common_path}/%{repo}
 %global import_path_libcontainer %{common_path}/libcontainer
 
-%global d_commit bb472f05c975b343fb13e55325a985f4ac1d0ca2
+%global d_commit a01dc02d9c369141f8bbbea0f51e8759dd6e5b93
 %global d_shortcommit %(c=%{d_commit}; echo ${c:0:7})
 
 %global utils_commit dab51acd1b1a77f7cb01a1b7e2129ec85c846b71
 
 # %%{name}-selinux stuff (prefix with ds_ for version/release etc.)
 # Some bits borrowed from the openstack-selinux package
-%global ds_commit 44abd21628c8f4c054343f12d609d03de4644234
+%global ds_commit e2a52267a0ae0b8a0f93334747dd5f1d0cf0d368
 %global ds_shortcommit %(c=%{ds_commit}; echo ${c:0:7})
 %global selinuxtype targeted
 %global moduletype services
@@ -49,7 +49,7 @@
 
 Name: %{repo}
 Version: %{d_version}
-Release: 7%{?dist}
+Release: 8%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -70,8 +70,6 @@ Source11: https://%{provider}.%{provider_tld}/vbatts/%{name}-utils/archive/%{uti
 Source12: https://%{provider}.%{provider_tld}/fedora-cloud/%{name}-selinux/archive/%{ds_commit}/%{name}-selinux-%{ds_shortcommit}.tar.gz
 # Source13 is the source tarball for %%{name}-storage-setup
 Source13: https://%{provider}.%{provider_tld}/projectatomic/%{name}-storage-setup/archive/%{dss_commit}/%{name}-storage-setup-%{dss_shortcommit}.tar.gz
-Patch0: libcontainer.patch
-Patch1: dev.patch
 BuildRequires: glibc-static
 BuildRequires: golang == 1.4.2
 BuildRequires: device-mapper-devel
@@ -86,7 +84,7 @@ Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.90-1
-#Requires: subscription-manager
+Requires: subscription-manager
 Provides: lxc-%{name} = %{d_version}-%{release}
 Provides: %{name}-io = %{d_version}-%{release}
 
@@ -141,8 +139,6 @@ SELinux policy modules for use with Docker.
 
 %prep
 %setup -qn %{name}-%{d_commit}
-%patch0 -p1
-%patch1 -p1
 cp %{SOURCE6} .
 
 # unpack %%{name}-selinux
@@ -270,17 +266,16 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 # remove %%{name}-selinux rpm spec file
 rm -rf %{name}-selinux-%{ds_commit}/%{name}-selinux.spec
 
-# don't install secrets dir
-#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# install secrets dir
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
-mkdir -p %{buildroot}/etc/%{name}/certs.d
+mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
 
 # install %%{name} config directory
 install -dp %{buildroot}%{_sysconfdir}/%{name}/
@@ -351,11 +346,11 @@ fi
 %{_mandir}/man1/%{name}*
 %{_mandir}/man5/*
 %{_bindir}/%{name}
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
-#%{_datadir}/rhel/secrets/rhsm
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/%{name}
 %{_unitdir}/%{name}.service
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
@@ -398,6 +393,12 @@ fi
 %{_datadir}/selinux/*
 
 %changelog
+* Wed Oct 14 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.8.2-8
+- built docker @rhatdan/rhel7-1.8 commit#a01dc02
+- built docker-selinux master commit#e2a5226
+- built d-s-s master commit#6898d43
+- built docker-utils master commit#dab51ac
+
 * Fri Oct 09 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.8.2-7
 - https://github.com/rhatdan/docker/pull/127 (changes for libcontainer/user)
 - https://github.com/rhatdan/docker/pull/128 (/dev mount from host)
