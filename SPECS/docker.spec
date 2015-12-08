@@ -16,12 +16,13 @@
 
 %global d_commit a01dc02d9c369141f8bbbea0f51e8759dd6e5b93
 %global d_shortcommit %(c=%{d_commit}; echo ${c:0:7})
+%global d_dist %(echo %{?dist} | sed 's/./-/')
 
 %global utils_commit dab51acd1b1a77f7cb01a1b7e2129ec85c846b71
 
 # %%{name}-selinux stuff (prefix with ds_ for version/release etc.)
 # Some bits borrowed from the openstack-selinux package
-%global ds_commit e2a52267a0ae0b8a0f93334747dd5f1d0cf0d368
+%global ds_commit dbfad05ac749c9cdf5df57f6a5132f4cc0493098
 %global ds_shortcommit %(c=%{ds_commit}; echo ${c:0:7})
 %global selinuxtype targeted
 %global moduletype services
@@ -29,7 +30,7 @@
 
 # %%{name}-storage-setup stuff (prefix with dss_ for version/release etc.)
 %global dss_libdir %{_prefix}/lib/%{name}-storage-setup
-%global dss_commit 6898d433f7c7666475656ab89565ec02d08c4c55
+%global dss_commit e9722cc6da4b46d783a9c4cf86ac4b8aaf7ce301
 %global dss_shortcommit %(c=%{dss_commit}; echo ${c:0:7})
 
 # Usage: _format var format
@@ -49,15 +50,15 @@
 
 Name: %{repo}
 Version: %{d_version}
-Release: 8%{?dist}
+Release: 10%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
 # only x86_64 for now: https://%%{provider}.%%{provider_tld}/%%{name}/%%{name}/issues/136
 ExclusiveArch: x86_64
 # Branch used available at
-# https://%%{provider}.%%{provider_tld}/rhatdan/%%{name}/commits/rhel7-1.8
-Source0: https://%{provider}.%{provider_tld}/rhatdan/%{name}/archive/%{d_commit}.tar.gz
+# https://%%{provider}.%%{provider_tld}/projectatomic/%%{name}/commits/rhel7-1.8
+Source0: https://%{provider}.%{provider_tld}/projectatomic/%{name}/archive/%{d_commit}.tar.gz
 Source1: %{name}.service
 Source3: %{name}.sysconfig
 Source4: %{name}-storage.sysconfig
@@ -73,6 +74,7 @@ Source13: https://%{provider}.%{provider_tld}/projectatomic/%{name}-storage-setu
 BuildRequires: glibc-static
 BuildRequires: golang == 1.4.2
 BuildRequires: device-mapper-devel
+BuildRequires: pkgconfig(audit)
 BuildRequires: btrfs-progs-devel
 BuildRequires: sqlite-devel
 BuildRequires: go-md2man
@@ -84,7 +86,7 @@ Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.90-1
-#Requires: subscription-manager
+Requires: subscription-manager
 Provides: lxc-%{name} = %{d_version}-%{release}
 Provides: %{name}-io = %{d_version}-%{release}
 
@@ -95,6 +97,9 @@ Requires(pre): %{name}-selinux >= %{version}-%{release}
 # rhbz#1214070 - update deps for d-s-s
 Requires: lvm2 >= 2.02.112
 Requires: xfsprogs
+
+# rhbz#1282898 - obsolete docker-storage-setup
+Obsoletes: %{repo}-storage-setup <= 0.0.4-2
 
 %description
 Docker is an open-source engine that automates the deployment of any
@@ -165,7 +170,8 @@ export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
 
 # build %%{name} binary
 sed -i '/rm -r autogen/d' hack/make.sh
-DEBUG=1 hack/make.sh dynbinary
+sed -i 's/$/%{d_dist}/' VERSION
+DOCKER_DEBUG=1 hack/make.sh dynbinary
 cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
 
@@ -175,7 +181,7 @@ make SHARE="%{_datadir}" TARGETS="%{modulenames}"
 popd
 
 pushd $(pwd)/_build/src
-# build %{name}tarsum and %{name}-fetch
+# build %{repo}tarsum and %{repo}-fetch
 go build %{provider}.%{provider_tld}/vbatts/%{name}-utils/cmd/%{name}-fetch
 go build %{provider}.%{provider_tld}/vbatts/%{name}-utils/cmd/%{name}tarsum
 popd
@@ -186,15 +192,20 @@ man/md2man-all.sh
 %install
 # install binary
 install -d %{buildroot}%{_bindir}
-install -p -m 755 bundles/%{d_version}/dynbinary/%{name}-%{d_version} %{buildroot}%{_bindir}/%{name}
+install -d %{buildroot}%{_libexecdir}/%{name}
 
 # install %%{name}tarsum and %%{name}-fetch
 install -p -m 755 _build/src/%{name}-fetch %{buildroot}%{_bindir}
 install -p -m 755 _build/src/%{name}tarsum %{buildroot}%{_bindir}
 
-# install %%{name}init
-install -d %{buildroot}%{_libexecdir}/%{name}
-install -p -m 755 bundles/%{d_version}/dynbinary/%{name}init-%{d_version} %{buildroot}%{_libexecdir}/%{name}/%{name}init
+for x in bundles/*%{d_dist}; do
+    if ! test -d $x/dynbinary; then
+	continue
+    fi
+    install -p -m 755 $x/dynbinary/%{repo}-*%{d_dist} %{buildroot}%{_bindir}/%{repo}
+    install -p -m 755 $x/dynbinary/%{repo}init-*%{d_dist} %{buildroot}%{_libexecdir}/%{repo}/%{repo}init
+    break
+done
 
 # install manpages
 install -d %{buildroot}%{_mandir}/man1
@@ -266,17 +277,16 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 # remove %%{name}-selinux rpm spec file
 rm -rf %{name}-selinux-%{ds_commit}/%{name}-selinux.spec
 
-# don't install secrets dir
-# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# install secrets dir
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
-mkdir -p %{buildroot}/etc/%{name}/certs.d
+mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
 
 # install %%{name} config directory
 install -dp %{buildroot}%{_sysconfdir}/%{name}/
@@ -322,7 +332,7 @@ if %{_sbindir}/selinuxenabled ; then
     %{_sbindir}/load_policy
     %relabel_files
     if [ $1 -eq 1 ]; then
-    restorecon -R %{_sharedstatedir}/%{repo}
+    restorecon -R %{_sharedstatedir}/%{repo} &> /dev/null || :
     fi
 fi
 
@@ -347,11 +357,11 @@ fi
 %{_mandir}/man1/%{name}*
 %{_mandir}/man5/*
 %{_bindir}/%{name}
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
-#%{_datadir}/rhel/secrets/rhsm
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/%{name}
 %{_unitdir}/%{name}.service
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
@@ -394,6 +404,62 @@ fi
 %{_datadir}/selinux/*
 
 %changelog
+* Wed Nov 11 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.8.2-10
+- Resolves: rhbz#1281805, rhbz#1271229, rhbz#1276346
+- Resolves: rhbz#1275376, rhbz#1282898
+
+* Wed Nov 11 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.8.2-9
+- Resolves: rhbz#1280068 - Build docker with DWARF
+- Move back to 1.8.2
+- built docker @rhatdan/rhel7-1.8 commit#a01dc02
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#e9722cc
+- built docker-utils commit#dab51ac
+
+* Mon Nov 02 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-8
+- Resolves: rhbz#1225093 (partially)
+- built docker @projectatomic/rhel7-1.9 commit#cdd3941
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#e9722cc
+- built docker-utils commit#dab51ac
+
+* Wed Oct 28 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-7
+- Resolves: rhbz#1275554
+- built docker @projectatomic/rhel7-1.9 commit#61fd965
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#e9722cc
+- built docker-utils commit#dab51ac
+
+* Wed Oct 28 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-6
+- built docker @projectatomic/rhel7-1.9 commit#166d43b
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#e9722cc
+- built docker-utils commit#dab51ac
+
+* Mon Oct 26 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-5
+- built docker @projectatomic/rhel7-1.9 commit#6897d78
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#e9722cc
+- built docker-utils commit#dab51ac
+
+* Fri Oct 23 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-4
+- built docker @projectatomic/rhel7-1.9 commit#0bb2bf4
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#e9722cc
+- built docker-utils commit#dab51ac
+
+* Thu Oct 22 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-3
+- built docker @projectatomic/rhel7-1.9 commit#1ea7f30
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#01df512
+- built docker-utils commit#dab51ac
+
+* Thu Oct 22 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-2
+- built docker @projectatomic/rhel7-1.9 commit#1ea7f30
+- built docker-selinux commit#fe61432
+- built d-s-s commit#01df512
+- built docker-utils commit#dab51ac
+
 * Wed Oct 14 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.8.2-8
 - built docker @rhatdan/rhel7-1.8 commit#a01dc02
 - built docker-selinux master commit#e2a5226
