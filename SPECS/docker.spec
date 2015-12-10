@@ -86,7 +86,7 @@ Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.90-1
-Requires: subscription-manager
+#Requires: subscription-manager
 Provides: lxc-%{name} = %{d_version}-%{release}
 Provides: %{name}-io = %{d_version}-%{release}
 
@@ -277,16 +277,17 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 # remove %%{name}-selinux rpm spec file
 rm -rf %{name}-selinux-%{ds_commit}/%{name}-selinux.spec
 
-# install secrets dir
-install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# don't install secrets dir
+# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
+#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
+mkdir -p %{buildroot}/etc/%{name}/certs.d
 
 # install %%{name} config directory
 install -dp %{buildroot}%{_sysconfdir}/%{name}/
@@ -357,11 +358,11 @@ fi
 %{_mandir}/man1/%{name}*
 %{_mandir}/man5/*
 %{_bindir}/%{name}
-%dir %{_datadir}/rhel
-%dir %{_datadir}/rhel/secrets
-%{_datadir}/rhel/secrets/etc-pki-entitlement
-%{_datadir}/rhel/secrets/rhel7.repo
-%{_datadir}/rhel/secrets/rhsm
+#%dir %{_datadir}/rhel
+#%dir %{_datadir}/rhel/secrets
+#%{_datadir}/rhel/secrets/etc-pki-entitlement
+#%{_datadir}/rhel/secrets/rhel7.repo
+#%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/%{name}
 %{_unitdir}/%{name}.service
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
@@ -404,6 +405,9 @@ fi
 %{_datadir}/selinux/*
 
 %changelog
+* Thu Dec 10 2015 Johnny Hughes <johnny@centos.org> - 1.8.2-10
+- Manual CentOS debreanding
+
 * Wed Nov 11 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.8.2-10
 - Resolves: rhbz#1281805, rhbz#1271229, rhbz#1276346
 - Resolves: rhbz#1275376, rhbz#1282898
