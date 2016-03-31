@@ -1,3 +1,11 @@
+%if 0%{?fedora}
+%global with_devel 1
+%global with_unit_test 1
+%else
+%global with_devel 0
+%global with_unit_test 0
+%endif
+
 %global with_unit_test 1
 # modifying the dockerinit binary breaks the SHA1 sum check by docker
 %global __os_install_post %{_rpmconfigdir}/brp-compress
@@ -8,30 +16,40 @@
 %global provider github
 %global project docker
 %global repo %{project}
-%global common_path %{provider}.%{provider_tld}/%{project}
-%global d_version 1.8.2
 
-%global import_path %{common_path}/%{repo}
-%global import_path_libcontainer %{common_path}/libcontainer
+%global import_path %{provider}.%{provider_tld}/%{project}/%{name}
 
-%global d_commit a01dc02d9c369141f8bbbea0f51e8759dd6e5b93
-%global d_shortcommit %(c=%{d_commit}; echo ${c:0:7})
-%global d_dist %(echo %{?dist} | sed 's/./-/')
+# docker
+%global git0 https://github.com/projectatomic/docker
+%global commit0 78ee77d1ede95dcbc0c021ec722ed85178dc38ed
+%global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
 
-%global utils_commit dab51acd1b1a77f7cb01a1b7e2129ec85c846b71
+# d-s-s
+%global git1 https://github.com/projectatomic/docker-storage-setup
+%global commit1  c6f0553f248be2523a8b1bf345529d9958e1b82e
+%global shortcommit1 %(c=%{commit1}; echo ${c:0:7})
+%global dss_libdir %{_exec_prefix}/lib/%{name}-storage-setup
+
+# docker-selinux
+%global git2 https://github.com/projectatomic/docker-selinux
+%global commit2 8718b6204b7e9ffd151230380fe3dc71f58e14d3
+%global shortcommit2 %(c=%{commit2}; echo ${c:0:7})
+
+# docker-utils
+%global git3 https://github.com/vbatts/docker-utils
+%global commit3  b851c03ddae1db30a4acf5e4cc5e31b6a671af35
+%global shortcommit3 %(c=%{commit3}; echo ${c:0:7})
+
+# forward-journald
+%global git6 https://github.com/projectatomic/forward-journald
+%global commit6  77e02a9774a6ca054e41c27f6f319d701f1cbaea
+%global shortcommit6 %(c=%{commit6}; echo ${c:0:7})
 
 # %%{name}-selinux stuff (prefix with ds_ for version/release etc.)
 # Some bits borrowed from the openstack-selinux package
-%global ds_commit dbfad05ac749c9cdf5df57f6a5132f4cc0493098
-%global ds_shortcommit %(c=%{ds_commit}; echo ${c:0:7})
 %global selinuxtype targeted
 %global moduletype services
 %global modulenames %{name}
-
-# %%{name}-storage-setup stuff (prefix with dss_ for version/release etc.)
-%global dss_libdir %{_prefix}/lib/%{name}-storage-setup
-%global dss_commit e9722cc6da4b46d783a9c4cf86ac4b8aaf7ce301
-%global dss_shortcommit %(c=%{dss_commit}; echo ${c:0:7})
 
 # Usage: _format var format
 # Expand 'modulenames' into various formats as needed
@@ -39,7 +57,7 @@
 %global _format() export %1=""; for x in %{modulenames}; do %1+=%2; %1+=" "; done;
 
 # Relabel files
-%global relabel_files() %{_sbindir}/restorecon -R %{_bindir}/%{repo} %{_localstatedir}/run/%{repo}.sock %{_localstatedir}/run/%{repo}.pid %{_sysconfdir}/%{repo} %{_localstatedir}/log/%{repo} %{_localstatedir}/log/lxc %{_localstatedir}/lock/lxc %{_unitdir}/%{repo}.service %{_sysconfdir}/%{repo} &> /dev/null || :
+%global relabel_files() %{_sbindir}/restorecon -R %{_bindir}/%{name} %{_localstatedir}/run/%{name}.sock %{_localstatedir}/run/%{name}.pid %{_sysconfdir}/%{name} %{_localstatedir}/log/%{name} %{_localstatedir}/log/lxc %{_localstatedir}/lock/lxc %{_unitdir}/%{name}.service %{_sysconfdir}/%{name} &> /dev/null || :
 
 # Version of SELinux we were using
 %if 0%{?fedora} >= 22
@@ -49,16 +67,16 @@
 %endif
 
 Name: %{repo}
-Version: %{d_version}
-Release: 10%{?dist}
+Version: 1.9.1
+Release: 25%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
 # only x86_64 for now: https://%%{provider}.%%{provider_tld}/%%{name}/%%{name}/issues/136
 ExclusiveArch: x86_64
 # Branch used available at
-# https://%%{provider}.%%{provider_tld}/projectatomic/%%{name}/commits/rhel7-1.8
-Source0: https://%{provider}.%{provider_tld}/projectatomic/%{name}/archive/%{d_commit}.tar.gz
+# https://%%{provider}.%%{provider_tld}/projectatomic/%%{name}/commits/rhel7-1.9
+Source0: %{git0}/archive/%{commit0}.tar.gz
 Source1: %{name}.service
 Source3: %{name}.sysconfig
 Source4: %{name}-storage.sysconfig
@@ -66,29 +84,29 @@ Source5: %{name}-logrotate.sh
 Source6: README.%{name}-logrotate
 Source7: %{name}-network.sysconfig
 # Source11 is the source tarball for %%{name}tarsum and %%{name}-fetch
-Source11: https://%{provider}.%{provider_tld}/vbatts/%{name}-utils/archive/%{utils_commit}.tar.gz
+Source11: %{git3}/archive/%{commit3}.tar.gz
 # Source12 is the source tarball for %%{name}-selinux
-Source12: https://%{provider}.%{provider_tld}/fedora-cloud/%{name}-selinux/archive/%{ds_commit}/%{name}-selinux-%{ds_shortcommit}.tar.gz
+Source12: %{git2}/archive/%{commit2}/%{name}-selinux-%{shortcommit2}.tar.gz
 # Source13 is the source tarball for %%{name}-storage-setup
-Source13: https://%{provider}.%{provider_tld}/projectatomic/%{name}-storage-setup/archive/%{dss_commit}/%{name}-storage-setup-%{dss_shortcommit}.tar.gz
+Source13: %{git1}/archive/%{commit1}/%{name}-storage-setup-%{shortcommit1}.tar.gz
+Source14: %{git6}/archive/%{commit6}/forward-journald-%{shortcommit6}.tar.gz
 BuildRequires: glibc-static
-BuildRequires: golang == 1.4.2
+BuildRequires: golang >= 1.4.2
 BuildRequires: device-mapper-devel
 BuildRequires: pkgconfig(audit)
 BuildRequires: btrfs-progs-devel
 BuildRequires: sqlite-devel
-BuildRequires: go-md2man
+BuildRequires: go-md2man >= 1.0.4
 BuildRequires: pkgconfig(systemd)
-# appropriate systemd version as per rhbz#1171054
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires: xz
-Requires: device-mapper-libs >= 7:1.02.90-1
-#Requires: subscription-manager
-Provides: lxc-%{name} = %{d_version}-%{release}
-Provides: %{name}-io = %{d_version}-%{release}
+Requires: device-mapper-libs >= 7:1.02.97
+Requires: subscription-manager
+Provides: lxc-%{name} = %{version}-%{release}
+Provides: %{name}-io = %{version}-%{release}
 
 # RE: rhbz#1195804 - ensure min NVR for selinux-policy
 Requires: selinux-policy >= 3.13.1-23
@@ -99,7 +117,14 @@ Requires: lvm2 >= 2.02.112
 Requires: xfsprogs
 
 # rhbz#1282898 - obsolete docker-storage-setup
-Obsoletes: %{repo}-storage-setup <= 0.0.4-2
+Obsoletes: %{name}-storage-setup <= 0.0.4-2
+
+# rhbz#1304038
+Conflicts: atomic-openshift < 3.2
+Conflicts: origin < 1.2
+
+# rhbz#1300076
+Requires: %{name}-forward-journald = %{version}-%{release}
 
 %description
 Docker is an open-source engine that automates the deployment of any
@@ -121,8 +146,8 @@ Summary: %{summary} - for running unit tests
 
 %package logrotate
 Summary: cron job to run logrotate on Docker containers
-Requires: %{name} = %{d_version}-%{release}
-Provides: %{name}-io-logrotate = %{d_version}-%{release}
+Requires: %{name} = %{version}-%{release}
+Provides: %{name}-io-logrotate = %{version}-%{release}
 
 %description logrotate
 This package installs %{summary}. logrotate is assumed to be installed on
@@ -137,13 +162,25 @@ Requires(post): selinux-policy-targeted >= %{selinux_policyver}
 Requires(post): policycoreutils
 Requires(post): policycoreutils-python
 Requires(post): libselinux-utils
-Provides: %{name}-io-selinux
+Provides: %{name}-io-selinux = %{version}-%{release}
 
 %description selinux
 SELinux policy modules for use with Docker.
 
+%package forward-journald
+Summary: Forward stdin to journald
+License: ASL 2.0
+
+%description forward-journald
+Forward stdin to journald
+
+The main driver for this program is < go 1.6rc2 has a issue where 10
+SIGPIPE's on stdout or stderr cause go to generate a non-trappable SIGPIPE
+killing the process. This happens when journald is restarted while docker is
+running under systemd.
+
 %prep
-%setup -qn %{name}-%{d_commit}
+%setup -qn %{name}-%{commit0}
 cp %{SOURCE6} .
 
 # unpack %%{name}-selinux
@@ -155,35 +192,39 @@ tar zxf %{SOURCE11}
 # untar d-s-s
 tar zxf %{SOURCE13}
 
+# untar forward-journald
+tar zxf %{SOURCE14}
+
 %build
 mkdir _build
 
 pushd _build
-  mkdir -p src/%{provider}.%{provider_tld}/{%{name},vbatts}
+  mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic,vbatts}
   ln -s $(dirs +1 -l) src/%{import_path}
-  ln -s $(dirs +1 -l)/%{name}-utils-%{utils_commit} src/%{provider}.%{provider_tld}/vbatts/%{name}-utils
+  ln -s $(dirs +1 -l)/%{name}-utils-%{commit3} src/%{provider}.%{provider_tld}/vbatts/%{name}-utils
+  ln -s $(dirs +1 -l)/forward-journald-%{commit6} src/%{provider}.%{provider_tld}/projectatomic/forward-journald
 popd
 
-export DOCKER_GITCOMMIT="%{d_shortcommit}/%{d_version}"
+export DOCKER_GITCOMMIT="%{shortcommit0}/%{version}"
 export DOCKER_BUILDTAGS='selinux btrfs_noversion'
-export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
+export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}:$(pwd)/forward-journald-%{commit6}/vendor
 
 # build %%{name} binary
 sed -i '/rm -r autogen/d' hack/make.sh
-sed -i 's/$/%{d_dist}/' VERSION
 DOCKER_DEBUG=1 hack/make.sh dynbinary
 cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
 
 # build %%{name}-selinux
-pushd %{name}-selinux-%{ds_commit}
+pushd %{name}-selinux-%{commit2}
 make SHARE="%{_datadir}" TARGETS="%{modulenames}"
 popd
 
 pushd $(pwd)/_build/src
-# build %{repo}tarsum and %{repo}-fetch
+# build %%{name}tarsum and %%{name}-fetch
 go build %{provider}.%{provider_tld}/vbatts/%{name}-utils/cmd/%{name}-fetch
 go build %{provider}.%{provider_tld}/vbatts/%{name}-utils/cmd/%{name}tarsum
+go build %{provider}.%{provider_tld}/projectatomic/forward-journald
 popd
 
 # build %%{name} manpages
@@ -198,12 +239,12 @@ install -d %{buildroot}%{_libexecdir}/%{name}
 install -p -m 755 _build/src/%{name}-fetch %{buildroot}%{_bindir}
 install -p -m 755 _build/src/%{name}tarsum %{buildroot}%{_bindir}
 
-for x in bundles/*%{d_dist}; do
+for x in bundles/latest; do
     if ! test -d $x/dynbinary; then
-	continue
+        continue
     fi
-    install -p -m 755 $x/dynbinary/%{repo}-*%{d_dist} %{buildroot}%{_bindir}/%{repo}
-    install -p -m 755 $x/dynbinary/%{repo}init-*%{d_dist} %{buildroot}%{_libexecdir}/%{repo}/%{repo}init
+    install -p -m 755 $x/dynbinary/%{name}-%{version} %{buildroot}%{_bindir}/%{name}
+    install -p -m 755 $x/dynbinary/%{name}init-%{version} %{buildroot}%{_libexecdir}/%{name}/%{name}init
     break
 done
 
@@ -212,13 +253,15 @@ install -d %{buildroot}%{_mandir}/man1
 install -p -m 644 man/man1/* %{buildroot}%{_mandir}/man1
 install -d %{buildroot}%{_mandir}/man5
 install -p -m 644 man/man5/* %{buildroot}%{_mandir}/man5
+install -d %{buildroot}%{_mandir}/man8
+install -p -m 644 man/man8/%{repo}*.8 %{buildroot}%{_mandir}/man8
 
 # install bash completion
 install -d %{buildroot}%{_datadir}/bash-completion/completions/
 install -p -m 644 contrib/completion/bash/%{name} %{buildroot}%{_datadir}/bash-completion/completions/
 
 # install fish completion
-# create, install and own /usr/share/fish/vendor_completions.d until
+# create, install and own %%{_datadir}/fish/vendor_completions.d until
 # upstream fish provides it
 install -dp %{buildroot}%{_datadir}/fish/vendor_completions.d
 install -p -m 644 contrib/completion/fish/%{name}.fish %{buildroot}%{_datadir}/fish/vendor_completions.d
@@ -257,12 +300,12 @@ install -p -m 644 %{SOURCE7} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-networ
 # install SELinux interfaces
 %_format INTERFACES $x.if
 install -d %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
-install -p -m 644 %{name}-selinux-%{ds_commit}/$INTERFACES %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
+install -p -m 644 %{name}-selinux-%{commit2}/$INTERFACES %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
 
 # install policy modules
 %_format MODULES $x.pp.bz2
 install -d %{buildroot}%{_datadir}/selinux/packages
-install -m 0644 %{name}-selinux-%{ds_commit}/$MODULES %{buildroot}%{_datadir}/selinux/packages
+install -m 0644 %{name}-selinux-%{commit2}/$MODULES %{buildroot}%{_datadir}/selinux/packages
 
 %if 0%{?with_unit_test}
 install -d -m 0755 %{buildroot}%{_sharedstatedir}/%{name}-unit-test/
@@ -275,25 +318,24 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 %endif
 
 # remove %%{name}-selinux rpm spec file
-rm -rf %{name}-selinux-%{ds_commit}/%{name}-selinux.spec
+rm -rf %{name}-selinux-%{commit2}/%{name}-selinux.spec
 
-# don't install secrets dir
-# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# install secrets dir
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
-mkdir -p %{buildroot}/etc/%{name}/certs.d
+mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
 
 # install %%{name} config directory
 install -dp %{buildroot}%{_sysconfdir}/%{name}/
 
 # install %%{name}-storage-setup
-pushd %{name}-storage-setup-%{dss_commit}
+pushd %{name}-storage-setup-%{commit1}
 install -d %{buildroot}%{_bindir}
 install -p -m 755 %{name}-storage-setup.sh %{buildroot}%{_bindir}/%{name}-storage-setup
 install -d %{buildroot}%{_unitdir}
@@ -307,11 +349,15 @@ install -d %{buildroot}%{_mandir}/man1
 install -p -m 644 %{name}-storage-setup.1 %{buildroot}%{_mandir}/man1
 popd
 
+# install forward-journald
+install -d %{buildroot}%{_bindir}
+install -p -m 700 _build/src/forward-journald %{buildroot}%{_bindir}
+
 %check
 [ ! -w /run/%{name}.sock ] || {
     mkdir test_dir
     pushd test_dir
-    git clone https://%{import_path}
+    git clone https://github.com/projectatomic/docker.git -b rhel7-1.9
     pushd %{name}
     make test
     popd
@@ -333,7 +379,7 @@ if %{_sbindir}/selinuxenabled ; then
     %{_sbindir}/load_policy
     %relabel_files
     if [ $1 -eq 1 ]; then
-    restorecon -R %{_sharedstatedir}/%{repo} &> /dev/null || :
+    restorecon -R %{_sharedstatedir}/%{name} &> /dev/null || :
     fi
 fi
 
@@ -355,14 +401,15 @@ fi
 %files
 %doc AUTHORS CHANGELOG.md CONTRIBUTING.md MAINTAINERS NOTICE
 %doc LICENSE* README*.md
-%{_mandir}/man1/%{name}*
-%{_mandir}/man5/*
+%{_mandir}/man1/%{name}*.1.gz
+%{_mandir}/man5/*.5.gz
+%{_mandir}/man8/*.8.gz
 %{_bindir}/%{name}
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
-#%{_datadir}/rhel/secrets/rhsm
+%dir %{_datadir}/rhel
+%dir %{_datadir}/rhel/secrets
+%{_datadir}/rhel/secrets/etc-pki-entitlement
+%{_datadir}/rhel/secrets/rhel7.repo
+%{_datadir}/rhel/secrets/rhsm
 %{_libexecdir}/%{name}
 %{_unitdir}/%{name}.service
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
@@ -401,12 +448,175 @@ fi
 %{_sysconfdir}/cron.daily/%{name}-logrotate
 
 %files selinux
-%doc %{name}-selinux-%{ds_commit}/README.md
+%doc %{name}-selinux-%{commit2}/README.md
 %{_datadir}/selinux/*
 
+%files forward-journald
+%doc forward-journald-%{commit6}/LICENSE
+%doc forward-journald-%{commit6}/README.md
+%{_bindir}/forward-journald
+
 %changelog
-* Thu Dec 10 2015 Johnny Hughes <johnny@centos.org> - 1.8.2-10
-- Manual CentOS debreanding
+* Wed Mar 23 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-25
+- Resolves: rhbz#1320302 - Backport fix for --cgroup-parent in docker
+- same commits as release -24, only added bug number
+
+* Wed Mar 23 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-24
+- built docker @projectatomic/rhel7-1.9 commit#78ee77d
+- built docker-selinux commit#8718b62
+- built d-s-s commit#c6f0553
+- built docker-utils commit#b851c03
+- built forward-journald commit#77e02a9
+
+* Thu Mar 17 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-23
+- Resolves: rhbz#1318360 - delete bounds checking rules
+- built docker @projectatomic/rhel7-1.9 commit#f97fb16
+- built docker-selinux commit#8718b62
+- built d-s-s commit#c6f0553
+- built docker-utils commit#b851c03
+- built forward-journald commit#77e02a9
+
+* Tue Mar 15 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-22
+- Resolves: rhbz#1317991 - Set Delegate=yes for cgroup transient units
+- built docker @projectatomic/rhel7-1.9 commit#f97fb16
+- built docker-selinux commit#69be4dc
+- built d-s-s commit#03dfc7b
+- built docker-utils commit#b851c03
+- built forward-journald commit#77e02a9
+
+* Mon Mar 14 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-21
+- Resolves: rhbz#1317662 - include manpage for docker daemon (corrected)
+
+* Mon Mar 14 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-20
+- Resolves: rhbz#1317662 - include manpage for docker run
+- Resolves: rhbz#1317627 - ensure that we join all the cgroups
+- built docker @projectatomic/rhel7-1.9 commit#0275914
+- built docker-selinux commit#69be4dc
+- built d-s-s commit#03dfc7b
+- built docker-utils commit#b851c03
+- built forward-journald commit#77e02a9
+
+* Wed Mar 09 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-19
+- Resolves: rhbz#1316190 - set NotifyAccess=all in unitfile
+
+* Tue Mar 08 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-18
+- Resolves: rhbz#1286765 - set TimeoutStartSec=0 in unitfile
+- Resolves: rhbz#1298363, rhbz#1300076, rhbz#1304038, rhbz#1302418
+- built forward-journald commit#77e02a9 - other subpackage commits same as
+previous build
+
+* Tue Mar 08 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-17
+- built docker @projectatomic/rhel7-1.9 commit#185277d
+- built docker-selinux commit#e2e1f22
+- built d-s-s commit#03dfc7b
+- built docker-utils commit#b851c03
+- built forward-journald commit#48b9599
+
+* Tue Feb 02 2016 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-16
+- Resolves: rhbz#1304038 - conflict with openshift 3.1
+- allow golang >= 1.4.2
+
+* Thu Jan 28 2016 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-15
+- Resolves: rhbz#1302411
+- built docker @projectatomic/rhel7-1.9 commit#50e78a0
+- built docker-selinux commit#e2e1f22
+- built d-s-s commit#1c2b95b
+- built docker-utils commit#dab51ac
+
+* Tue Jan 26 2016 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-14
+- built docker @projectatomic/rhel7-1.9 commit#fe0b590
+- built docker-selinux commit#e2e1f22
+- built d-s-s commit#1c2b95b
+- built docker-utils commit#dab51ac
+
+* Mon Jan 25 2016 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-13
+- Resolves: rhbz#1301199 - do not append distro tag to docker version
+
+* Wed Jan 20 2016 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-12
+- built docker @projectatomic/rhel7-1.9 commit#2dbcc37
+- built docker-selinux commit#e2e1f22
+- built d-s-s commit#1c2b95b
+- built docker-utils commit#dab51ac
+
+* Fri Jan 15 2016 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-11
+- built docker @projectatomic/rhel7-1.9 commit#2dbcc37
+- built docker-selinux commit#e2e1f22
+- built d-s-s commit#1c2b95b
+- built docker-utils commit#dab51ac
+
+* Mon Jan 11 2016 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-10
+- built docker @projectatomic/rhel7-1.9 commit#26797f7
+- built docker-selinux commit#e2e1f22
+- built d-s-s commit#1c2b95b
+- built docker-utils commit#dab51ac
+
+* Sat Dec 12 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-9
+- built docker @projectatomic/rhel7-1.9 commit#401dfee
+- built docker-selinux commit#e2e1f22
+- built d-s-s commit#91d6cfd
+- built docker-utils commit#dab51ac
+
+* Fri Dec 04 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-8
+- built docker @projectatomic/rhel7-1.9 commit#32fb322
+- built docker-selinux commit#441f312
+- built d-s-s commit#e38b94d
+- built docker-utils commit#dab51ac
+
+* Wed Dec 02 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-7
+- built docker @projectatomic/rhel7-1.9 commit#32fb322
+- built docker-selinux commit#441f312
+- built d-s-s commit#0814c26
+- built docker-utils commit#dab51ac
+
+* Wed Dec 02 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-6
+- built docker @projectatomic/rhel7-1.9 commit#32fb322
+- built docker-selinux commit#441f312
+- built d-s-s commit#0814c26
+- built docker-utils commit#dab51ac
+
+* Mon Nov 30 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-5
+- built docker @projectatomic/rhel7-1.9 commit#32fb322
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#0814c26
+- built docker-utils commit#dab51ac
+
+* Wed Nov 25 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-4
+- Resolves: rhbz#1275399
+- built docker @projectatomic/rhel7-1.9 commit#390a466
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#0814c26
+- built docker-utils commit#dab51ac
+
+* Tue Nov 24 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-3
+- built docker @projectatomic/rhel7-1.9 commit#698d463
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#0814c26
+- built docker-utils commit#dab51ac
+
+* Tue Nov 24 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-2
+- Resolves: rhbz#1263394 - set unitfile to 5 mins
+
+* Tue Nov 24 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.1-1
+- use correct version number, no other change since last build
+
+* Tue Nov 24 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-11
+- built docker @projectatomic/rhel7-1.9 commit#f1cda67
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#0814c26
+- built docker-utils commit#dab51ac
+
+* Mon Nov 23 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-10
+- Resolves: rhbz#1283718
+- built docker @projectatomic/rhel7-1.9 commit#0ba2491
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#0814c26
+- built docker-utils commit#dab51ac
+
+* Thu Nov 19 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.9.0-9
+- built docker @projectatomic/rhel7-1.9 commit#eb84909
+- built docker-selinux commit#dbfad05
+- built d-s-s commit#c638a60
+- built docker-utils commit#dab51ac
 
 * Wed Nov 11 2015 Lokesh Mandvekar <lsm5@fedoraproject.org> - 1.8.2-10
 - Resolves: rhbz#1281805, rhbz#1271229, rhbz#1276346
@@ -1138,7 +1348,7 @@ job
 - Fix docker-registry patch to handle search
 
 * Thu Jul 10 2014 Dan Walsh <dwalsh@redhat.com> - 1.0.0-8
-- Re-add %{_datadir}/rhel/secrets/rhel7.repo
+- Re-add %%{_datadir}/rhel/secrets/rhel7.repo
 
 * Wed Jul 9 2014 Dan Walsh <dwalsh@redhat.com> - 1.0.0-7
 - Patch: Save "COMMENT" field in Dockerfile into image content.
