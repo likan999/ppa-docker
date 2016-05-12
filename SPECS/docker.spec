@@ -17,28 +17,23 @@
 %global project docker
 %global repo %{project}
 
-%global import_path %{provider}.%{provider_tld}/%{project}/%{name}
+%global import_path %{provider}.%{provider_tld}/%{project}/%{repo}
 
 # docker
 %global git0 https://github.com/projectatomic/docker
-%global commit0 78ee77d1ede95dcbc0c021ec722ed85178dc38ed
+%global commit0 ab77bdeb3e2c012f3b533c35205c7a322d742f94
 %global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
 
 # d-s-s
 %global git1 https://github.com/projectatomic/docker-storage-setup
-%global commit1  c6f0553f248be2523a8b1bf345529d9958e1b82e
+%global commit1 df2af9439577cedc2c502512d887c8df10a33cbf
 %global shortcommit1 %(c=%{commit1}; echo ${c:0:7})
 %global dss_libdir %{_exec_prefix}/lib/%{name}-storage-setup
 
 # docker-selinux
 %global git2 https://github.com/projectatomic/docker-selinux
-%global commit2 8718b6204b7e9ffd151230380fe3dc71f58e14d3
+%global commit2 032bcda7b1eb6d9d75d3c0ce64d9d35cdb9c7b85
 %global shortcommit2 %(c=%{commit2}; echo ${c:0:7})
-
-# docker-utils
-%global git3 https://github.com/vbatts/docker-utils
-%global commit3  b851c03ddae1db30a4acf5e4cc5e31b6a671af35
-%global shortcommit3 %(c=%{commit3}; echo ${c:0:7})
 
 # forward-journald
 %global git6 https://github.com/projectatomic/forward-journald
@@ -68,7 +63,7 @@
 
 Name: %{repo}
 Version: 1.9.1
-Release: 25%{?dist}
+Release: 40%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -83,13 +78,13 @@ Source4: %{name}-storage.sysconfig
 Source5: %{name}-logrotate.sh
 Source6: README.%{name}-logrotate
 Source7: %{name}-network.sysconfig
-# Source11 is the source tarball for %%{name}tarsum and %%{name}-fetch
-Source11: %{git3}/archive/%{commit3}.tar.gz
 # Source12 is the source tarball for %%{name}-selinux
 Source12: %{git2}/archive/%{commit2}/%{name}-selinux-%{shortcommit2}.tar.gz
 # Source13 is the source tarball for %%{name}-storage-setup
 Source13: %{git1}/archive/%{commit1}/%{name}-storage-setup-%{shortcommit1}.tar.gz
 Source14: %{git6}/archive/%{commit6}/forward-journald-%{shortcommit6}.tar.gz
+Source15: %{name}-common.sh
+Source16: README-%{name}-common
 BuildRequires: glibc-static
 BuildRequires: golang >= 1.4.2
 BuildRequires: device-mapper-devel
@@ -98,13 +93,14 @@ BuildRequires: btrfs-progs-devel
 BuildRequires: sqlite-devel
 BuildRequires: go-md2man >= 1.0.4
 BuildRequires: pkgconfig(systemd)
+Requires: %{name}-common = %{version}-%{release}
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.97
-#Requires: subscription-manager
+Requires: subscription-manager
 Provides: lxc-%{name} = %{version}-%{release}
 Provides: %{name}-io = %{version}-%{release}
 
@@ -118,10 +114,6 @@ Requires: xfsprogs
 
 # rhbz#1282898 - obsolete docker-storage-setup
 Obsoletes: %{name}-storage-setup <= 0.0.4-2
-
-# rhbz#1304038
-Conflicts: atomic-openshift < 3.2
-Conflicts: origin < 1.2
 
 # rhbz#1300076
 Requires: %{name}-forward-journald = %{version}-%{release}
@@ -179,6 +171,14 @@ SIGPIPE's on stdout or stderr cause go to generate a non-trappable SIGPIPE
 killing the process. This happens when journald is restarted while docker is
 running under systemd.
 
+%package common
+Summary: Common files for docker and docker-latest
+
+%description common
+This package contains the common files %{_bindir}/%{name} which will point to
+%{_bindir}/%{name}-current or %{_bindir}/%{name}-latest configurable via
+%{_sysconfdir}/sysconfig/%{repo}
+
 %prep
 %setup -qn %{name}-%{commit0}
 cp %{SOURCE6} .
@@ -186,32 +186,30 @@ cp %{SOURCE6} .
 # unpack %%{name}-selinux
 tar zxf %{SOURCE12}
 
-# untar %%{name}-utils tarball
-tar zxf %{SOURCE11}
-
 # untar d-s-s
 tar zxf %{SOURCE13}
 
 # untar forward-journald
 tar zxf %{SOURCE14}
 
+cp %{SOURCE16} .
+
 %build
 mkdir _build
 
 pushd _build
-  mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic,vbatts}
+  mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic}
   ln -s $(dirs +1 -l) src/%{import_path}
-  ln -s $(dirs +1 -l)/%{name}-utils-%{commit3} src/%{provider}.%{provider_tld}/vbatts/%{name}-utils
   ln -s $(dirs +1 -l)/forward-journald-%{commit6} src/%{provider}.%{provider_tld}/projectatomic/forward-journald
 popd
 
 export DOCKER_GITCOMMIT="%{shortcommit0}/%{version}"
-export DOCKER_BUILDTAGS='selinux btrfs_noversion'
+export DOCKER_BUILDTAGS='selinux'
 export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}:$(pwd)/forward-journald-%{commit6}/vendor
 
 # build %%{name} binary
-sed -i '/rm -r autogen/d' hack/make.sh
-DOCKER_DEBUG=1 hack/make.sh dynbinary
+sed -i '/LDFLAGS_STATIC/d' hack/make/.dockerinit
+IAMSTATIC=false DOCKER_DEBUG=1 hack/make.sh dynbinary
 cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
 
@@ -221,9 +219,6 @@ make SHARE="%{_datadir}" TARGETS="%{modulenames}"
 popd
 
 pushd $(pwd)/_build/src
-# build %%{name}tarsum and %%{name}-fetch
-go build %{provider}.%{provider_tld}/vbatts/%{name}-utils/cmd/%{name}-fetch
-go build %{provider}.%{provider_tld}/vbatts/%{name}-utils/cmd/%{name}tarsum
 go build %{provider}.%{provider_tld}/projectatomic/forward-journald
 popd
 
@@ -235,16 +230,11 @@ man/md2man-all.sh
 install -d %{buildroot}%{_bindir}
 install -d %{buildroot}%{_libexecdir}/%{name}
 
-# install %%{name}tarsum and %%{name}-fetch
-install -p -m 755 _build/src/%{name}-fetch %{buildroot}%{_bindir}
-install -p -m 755 _build/src/%{name}tarsum %{buildroot}%{_bindir}
-
 for x in bundles/latest; do
     if ! test -d $x/dynbinary; then
         continue
     fi
-    install -p -m 755 $x/dynbinary/%{name}-%{version} %{buildroot}%{_bindir}/%{name}
-    install -p -m 755 $x/dynbinary/%{name}init-%{version} %{buildroot}%{_libexecdir}/%{name}/%{name}init
+    install -p -m 755 $x/dynbinary/%{name}-%{version} %{buildroot}%{_bindir}/%{name}-current
     break
 done
 
@@ -320,17 +310,16 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 # remove %%{name}-selinux rpm spec file
 rm -rf %{name}-selinux-%{commit2}/%{name}-selinux.spec
 
-# don't install secrets dir
-# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# install secrets dir
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
-mkdir -p %{buildroot}/etc/%{name}/certs.d
+mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
 
 # install %%{name} config directory
 install -dp %{buildroot}%{_sysconfdir}/%{name}/
@@ -353,6 +342,10 @@ popd
 # install forward-journald
 install -d %{buildroot}%{_bindir}
 install -p -m 700 _build/src/forward-journald %{buildroot}%{_bindir}
+
+# install %%{_bindir}/%{name}
+install -d %{buildroot}%{_bindir}
+install -p -m 755 %{SOURCE15} %{buildroot}%{_bindir}/%{name}
 
 %check
 [ ! -w /run/%{name}.sock ] || {
@@ -399,23 +392,23 @@ if %{_sbindir}/selinuxenabled ; then
 fi
 fi
 
+#define license tag if not already defined
+%{!?_licensedir:%global license %doc}
+
 %files
-%doc AUTHORS CHANGELOG.md CONTRIBUTING.md MAINTAINERS NOTICE
-%doc LICENSE* README*.md
+%license LICENSE*
+%doc AUTHORS CHANGELOG.md CONTRIBUTING.md MAINTAINERS NOTICE README*.md
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-*
+%dir %{_sysconfdir}/%{name}
+%{_sysconfdir}/%{name}/*
 %{_mandir}/man1/%{name}*.1.gz
 %{_mandir}/man5/*.5.gz
 %{_mandir}/man8/*.8.gz
-%{_bindir}/%{name}
-#%dir %{_datadir}/rhel
-#%dir %{_datadir}/rhel/secrets
-#%{_datadir}/rhel/secrets/etc-pki-entitlement
-#%{_datadir}/rhel/secrets/rhel7.repo
-#%{_datadir}/rhel/secrets/rhsm
+%{_bindir}/%{name}-*
+%dir %{_datadir}/rhel
+%{_datadir}/rhel/*
 %{_libexecdir}/%{name}
-%{_unitdir}/%{name}.service
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-storage
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-network
+%{_unitdir}/%{name}*
 %{_datadir}/bash-completion/completions/%{name}
 %dir %{_sharedstatedir}/%{name}
 %{_udevrulesdir}/80-%{name}.rules
@@ -429,15 +422,8 @@ fi
 %{_datadir}/vim/vimfiles/syntax/%{name}file.vim
 %dir %{_datadir}/zsh/site-functions
 %{_datadir}/zsh/site-functions/_%{name}
-%{_sysconfdir}/%{name}
-%{_bindir}/%{name}-fetch
-%{_bindir}/%{name}tarsum
-# %%{name}-storage-setup specific
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-storage-setup
-%{_unitdir}/%{name}-storage-setup.service
-%{_bindir}/%{name}-storage-setup
-%{dss_libdir}/%{name}-storage-setup
-%{dss_libdir}/libdss.sh
+%dir %{dss_libdir}
+%{dss_libdir}/*
 
 %if 0%{?with_unit_test}
 %files unit-test
@@ -453,13 +439,103 @@ fi
 %{_datadir}/selinux/*
 
 %files forward-journald
-%doc forward-journald-%{commit6}/LICENSE
+%license forward-journald-%{commit6}/LICENSE
 %doc forward-journald-%{commit6}/README.md
 %{_bindir}/forward-journald
 
+%files common
+%doc README-%{name}-common
+%{_bindir}/%{name}
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}
+
 %changelog
-* Fri Apr  1 2016 Johnny Hughes <johnny@centos.org> - 1.9.1-25
-- - Manual CentOS debreanding
+* Tue May 03 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-40
+- Resolves: #1332592 - requires docker-common = version-release
+- From: Ed Santiago <santiago@redhat.com>
+
+* Tue May 03 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-39
+- Resolves: #1332016, #1329743
+- built docker projectatomic/rhel7-1.9 commit ab77bde
+- built docker-selinux origin/rhel-1.10 commit 032bcda
+
+* Wed Apr 27 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-38
+- Resolves: #1331007 - fix selinux labels for new docker execs names
+- built docker-selinux commit#501ea4c
+
+* Tue Apr 26 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-37
+- Resolves: #1330622 - /usr/bin/docker handles docker/docker-latest
+conditions
+- Resolves: #1330290 - d-s-s: do not pass devices which have 'creation of
+device node' in progress
+- built d-s-s commit#df2af94
+
+* Tue Apr 26 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-36
+- Resolves: #1330622 - don't allow $DOCKERBINARY==/usr/bin/docker
+
+* Tue Apr 26 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-35
+- #1330595 fix From: Ed Santiago <santiago@redhat.com>
+
+* Tue Apr 26 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-34
+- Resolves: #1330595
+- use correct exec path for docker-current in unitfile
+
+* Mon Apr 25 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-33
+- Resolves: #1328219 - include docker-common subpackage
+- docker-common is a runtime requirement for both docker and docker-latest
+
+* Thu Apr 21 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-32
+- update upstream URL
+- Resolves: #1329423 - skip /dev setup in container when it's bind mounted in
+- Resolves: #1329452 - CVE-2016-3697
+- built docker @projectatomic/rhel7-1.9 commit#639e055
+- built docker-selinux commit#39c092c
+- built d-s-s commit#04a3847
+- built forward-journald commit#77e02a9
+
+* Thu Apr 21 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-31
+- test-fix for https://github.com/openshift/openshift-ansible/issues/1779
+
+* Mon Apr 18 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-30
+- Bump release - previous git log had 2 docker commit values
+- built docker @projectatomic/rhel7-1.9 commit#a1c9058
+- built docker-selinux commit#39c092c
+- built d-s-s commit#04a3847
+- built forward-journald commit#77e02a9
+
+* Mon Apr 18 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-29
+- Resolves: #1283718, #1277982, #1126555 #1134424, #1186066,
+    #1228777, #1255060, #1256832, #1261565, #1264562, #1266307,
+    #1266525 #1266902 #1268059 #1272143 #1277982 #1283718 #1300033,
+    #1303110 #1309739 #1316651 #1319783
+- remove conflicts with atomic-openshift and origin
+- built docker @projectatomic/rhel7-1.9 commit#a1c9058
+- built docker-selinux commit#39c092c
+- built d-s-s commit#04a3847
+- built forward-journald commit#77e02a9
+- do not even build dockerinit
+
+* Sun Apr 10 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-28
+- built docker @projectatomic/rhel7-1.9 commit#b795b73
+- built docker-selinux commit#39c092c
+- built d-s-s commit#ac50cee
+- built docker-utils commit#b851c03
+- built v1.10-migrator commit#c417a6a
+- built forward-journald commit#77e02a9
+
+* Sun Apr 10 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-27
+- split docker-utils into a subpackage so docker-latest can reuse it.
+- docker requires docker-utils at runtime
+- do not ship dockerinit
+- spec cleanups
+
+* Mon Apr 04 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-26
+- Resolves: rhbz#1323819 - allow images with VOLUME(s) when binds destination
+override volume definition
+- built docker @projectatomic/rhel7-1.9 commit#b795b73
+- built docker-selinux commit#e72d8d7
+- built d-s-s commit#346018e
+- built docker-utils commit#b851c03
+- built forward-journald commit#77e02a9
 
 * Wed Mar 23 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-25
 - Resolves: rhbz#1320302 - Backport fix for --cgroup-parent in docker
