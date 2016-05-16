@@ -100,7 +100,7 @@ Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.97
-Requires: subscription-manager
+#Requires: subscription-manager
 Provides: lxc-%{name} = %{version}-%{release}
 Provides: %{name}-io = %{version}-%{release}
 
@@ -310,16 +310,17 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 # remove %%{name}-selinux rpm spec file
 rm -rf %{name}-selinux-%{commit2}/%{name}-selinux.spec
 
-# install secrets dir
-install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# don't install secrets dir
+# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
+#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
+mkdir -p %{buildroot}/etc/%{name}/certs.d
 
 # install %%{name} config directory
 install -dp %{buildroot}%{_sysconfdir}/%{name}/
@@ -405,8 +406,8 @@ fi
 %{_mandir}/man5/*.5.gz
 %{_mandir}/man8/*.8.gz
 %{_bindir}/%{name}-*
-%dir %{_datadir}/rhel
-%{_datadir}/rhel/*
+#%dir %{_datadir}/rhel
+#%{_datadir}/rhel/*
 %{_libexecdir}/%{name}
 %{_unitdir}/%{name}*
 %{_datadir}/bash-completion/completions/%{name}
@@ -449,6 +450,9 @@ fi
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 
 %changelog
+* Mon May 16 2016 Johnny Hughes <johnny@centos.org> - 1.9.1-40
+- Manual CentOS debreanding
+
 * Tue May 03 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-40
 - Resolves: #1332592 - requires docker-common = version-release
 - From: Ed Santiago <santiago@redhat.com>
