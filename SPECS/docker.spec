@@ -21,24 +21,56 @@
 
 # docker
 %global git0 https://github.com/projectatomic/docker
-%global commit0 ab77bdeb3e2c012f3b533c35205c7a322d742f94
+%global commit0 a46c31af70ca8d15521e312ad9ef7085cfe2fd3f
 %global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
-
-# d-s-s
-%global git1 https://github.com/projectatomic/docker-storage-setup
-%global commit1 df2af9439577cedc2c502512d887c8df10a33cbf
-%global shortcommit1 %(c=%{commit1}; echo ${c:0:7})
-%global dss_libdir %{_exec_prefix}/lib/%{name}-storage-setup
+# docker_branch used in %%check
+%global docker_branch rhel7-1.10.3
 
 # docker-selinux
-%global git2 https://github.com/projectatomic/docker-selinux
-%global commit2 032bcda7b1eb6d9d75d3c0ce64d9d35cdb9c7b85
+%global git1 https://github.com/projectatomic/docker-selinux
+%global commit1 032bcda7b1eb6d9d75d3c0ce64d9d35cdb9c7b85
+%global shortcommit1 %(c=%{commit1}; echo ${c:0:7})
+
+# d-s-s
+%global git2 https://github.com/projectatomic/docker-storage-setup
+%global commit2 194eca25fd0d180b62f3ecf1b7b408992fd6a083
 %global shortcommit2 %(c=%{commit2}; echo ${c:0:7})
+%global dss_libdir %{_exec_prefix}/lib/%{name}-storage-setup
 
 # forward-journald
-%global git6 https://github.com/projectatomic/forward-journald
-%global commit6  77e02a9774a6ca054e41c27f6f319d701f1cbaea
+%global git3 https://github.com/projectatomic/forward-journald
+%global commit3  77e02a9774a6ca054e41c27f6f319d701f1cbaea
+%global shortcommit3 %(c=%{commit3}; echo ${c:0:7})
+
+# docker-novolume-plugin
+%global git4 https://github.com/projectatomic/%{repo}-novolume-plugin
+%global commit4 7715854b5f3ccfdbf005c9e95d6e9afcaae9376a
+%global shortcommit4 %(c=%{commit4}; echo ${c:0:7})
+
+# rhel-push-plugin
+%global git5 https://github.com/projectatomic/rhel-push-plugin
+%global commit5 1a0046fc57606e329223748391d90284f2346565
+%global shortcommit5 %(c=%{commit5}; echo ${c:0:7})
+
+# docker-lvm-plugin
+%global git6 https://github.com/projectatomic/%{repo}-lvm-plugin
+%global commit6 3253f53a791f61397fa77478904c87460a9258ca
 %global shortcommit6 %(c=%{commit6}; echo ${c:0:7})
+
+# v1.10-migrator
+%global git7 https://github.com/%{repo}/v1.10-migrator
+%global commit7 c417a6a022c5023c111662e8280f885f6ac259be
+%global shortcommit7 %(c=%{commit7}; echo ${c:0:7})
+
+# oci-register-machine
+%global git16 https://github.com/projectatomic/oci-register-machine
+%global commit16 7d4ce654a2eaf282d16fd43f20130b3cf69b70c2
+%global shortcommit16 %(c=%{commit16}; echo ${c:0:7})
+
+# oci-systemd-hook
+%global git17 https://github.com/projectatomic/oci-systemd-hook
+%global commit17 41491a3c73193527487fb502026d41d3f0aad1aa
+%global shortcommit17 %(c=%{commit17}; echo ${c:0:7})
 
 # %%{name}-selinux stuff (prefix with ds_ for version/release etc.)
 # Some bits borrowed from the openstack-selinux package
@@ -62,29 +94,35 @@
 %endif
 
 Name: %{repo}
-Version: 1.9.1
-Release: 40%{?dist}
+Version: 1.10.3
+Release: 44%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
 # only x86_64 for now: https://%%{provider}.%%{provider_tld}/%%{name}/%%{name}/issues/136
 ExclusiveArch: x86_64
 # Branch used available at
-# https://%%{provider}.%%{provider_tld}/projectatomic/%%{name}/commits/rhel7-1.9
+# https://%%{provider}.%%{provider_tld}/projectatomic/%%{name}/commits/rhel7-1.10.3
 Source0: %{git0}/archive/%{commit0}.tar.gz
-Source1: %{name}.service
-Source3: %{name}.sysconfig
-Source4: %{name}-storage.sysconfig
-Source5: %{name}-logrotate.sh
-Source6: README.%{name}-logrotate
-Source7: %{name}-network.sysconfig
-# Source12 is the source tarball for %%{name}-selinux
-Source12: %{git2}/archive/%{commit2}/%{name}-selinux-%{shortcommit2}.tar.gz
-# Source13 is the source tarball for %%{name}-storage-setup
-Source13: %{git1}/archive/%{commit1}/%{name}-storage-setup-%{shortcommit1}.tar.gz
-Source14: %{git6}/archive/%{commit6}/forward-journald-%{shortcommit6}.tar.gz
-Source15: %{name}-common.sh
-Source16: README-%{name}-common
+Source1: %{git1}/archive/%{commit1}/%{name}-selinux-%{shortcommit1}.tar.gz
+Source2: %{git2}/archive/%{commit2}/%{name}-storage-setup-%{shortcommit2}.tar.gz
+Source3: %{git3}/archive/%{commit3}/forward-journald-%{shortcommit3}.tar.gz
+Source4: %{git4}/archive/%{commit4}/%{name}-novolume-plugin-%{shortcommit4}.tar.gz
+Source5: %{git5}/archive/%{commit5}/rhel-push-plugin-%{shortcommit5}.tar.gz
+Source6: %{git6}/archive/%{commit6}/%{name}-lvm-plugin-%{shortcommit6}.tar.gz
+Source7: %{git7}/archive/%{commit7}/v1.10-migrator-%{shortcommit7}.tar.gz
+Source8: %{name}.service
+Source9: %{name}.sysconfig
+Source10: %{name}-storage.sysconfig
+Source11: %{name}-network.sysconfig
+Source12: %{name}-logrotate.sh
+Source13: README.%{name}-logrotate
+Source14: %{name}-common.sh
+Source15: README-%{name}-common
+Source16: %{git16}/archive/%{commit16}/oci-register-machine-%{shortcommit16}.tar.gz
+Source17: %{git17}/archive/%{commit17}/oci-systemd-hook-%{shortcommit17}.tar.gz
+Source18: v1.10-migrator-helper
+BuildRequires: git
 BuildRequires: glibc-static
 BuildRequires: golang >= 1.4.2
 BuildRequires: device-mapper-devel
@@ -93,6 +131,7 @@ BuildRequires: btrfs-progs-devel
 BuildRequires: sqlite-devel
 BuildRequires: go-md2man >= 1.0.4
 BuildRequires: pkgconfig(systemd)
+BuildRequires: libseccomp-devel
 Requires: %{name}-common = %{version}-%{release}
 Requires(post): systemd
 Requires(preun): systemd
@@ -100,13 +139,18 @@ Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.97
-#Requires: subscription-manager
+Requires: subscription-manager
+Requires: %{name}-rhel-push-plugin = %{version}-%{release}
+Requires: oci-register-machine = %{version}-%{release}
+Requires: oci-systemd-hook = %{version}-%{release}
 Provides: lxc-%{name} = %{version}-%{release}
 Provides: %{name}-io = %{version}-%{release}
 
 # RE: rhbz#1195804 - ensure min NVR for selinux-policy
 Requires: selinux-policy >= 3.13.1-23
 Requires(pre): %{name}-selinux >= %{version}-%{release}
+# rhbz#1300076
+Requires: %{name}-forward-journald = %{version}-%{release}
 
 # rhbz#1214070 - update deps for d-s-s
 Requires: lvm2 >= 2.02.112
@@ -115,8 +159,6 @@ Requires: xfsprogs
 # rhbz#1282898 - obsolete docker-storage-setup
 Obsoletes: %{name}-storage-setup <= 0.0.4-2
 
-# rhbz#1300076
-Requires: %{name}-forward-journald = %{version}-%{release}
 
 %description
 Docker is an open-source engine that automates the deployment of any
@@ -179,20 +221,145 @@ This package contains the common files %{_bindir}/%{name} which will point to
 %{_bindir}/%{name}-current or %{_bindir}/%{name}-latest configurable via
 %{_sysconfdir}/sysconfig/%{repo}
 
+%package novolume-plugin
+URL: %{git4}
+License: MIT
+Summary: Block container starts with local volumes defined
+Requires: %{name} = %{version}-%{release}
+
+%description novolume-plugin
+When a volume in provisioned via the `VOLUME` instruction in a Dockerfile or
+via `docker run -v volumename`, host's storage space is used. This could lead to
+an unexpected out of space issue which could bring down everything.
+There are situations where this is not an accepted behavior. PAAS, for
+instance, can't allow their users to run their own images without the risk of
+filling the entire storage space on a server. One solution to this is to deny users
+from running images with volumes. This way the only storage a user gets can be limited
+and PAAS can assign quota to it.
+
+This plugin solves this issue by disallowing starting a container with
+local volumes defined. In particular, the plugin will block `docker run` with:
+
+- `--volumes-from`
+- images that have `VOLUME`(s) defined
+- volumes early provisioned with `docker volume` command
+
+The only thing allowed will be just bind mounts.
+
+%package rhel-push-plugin
+License: GPLv2
+Summary: Avoids pushing a RHEL-based image to docker.io registry
+
+%description rhel-push-plugin
+In order to use this plugin you must be running at least Docker 1.10 which
+has support for authorization plugins.
+
+This plugin avoids any RHEL based image to be pushed to the default docker.io
+registry preventing users to violate the RH subscription agreement.
+
+%package lvm-plugin
+License: LGPLv3
+Summary: Docker volume driver for lvm volumes
+Requires: %{name} = %{version}-%{release}
+
+%description lvm-plugin
+Docker Volume Driver for lvm volumes.
+
+This plugin can be used to create lvm volumes of specified size, which can 
+then be bind mounted into the container using `docker run` command.
+
+%package v1.10-migrator
+License: ASL 2.0 and CC-BY-SA
+Summary: Calculates SHA256 checksums for docker layer content
+
+%description v1.10-migrator
+Starting from v1.10 docker uses content addressable IDs for the images and
+layers instead of using generated ones. This tool calculates SHA256 checksums
+for docker layer content, so that they don't need to be recalculated when the
+daemon starts for the first time.
+
+The migration usually runs on daemon startup but it can be quite slow(usually
+100-200MB/s) and daemon will not be able to accept requests during
+that time. You can run this tool instead while the old daemon is still
+running and skip checksum calculation on startup.
+
+%package -n oci-register-machine
+License: ASL 2.0
+Summary: Golang binary to register OCI containers with systemd-machined
+
+%description -n oci-register-machine
+%{summary}
+
+%package -n oci-systemd-hook
+License: GPLv3+
+Summary: OCI systemd hook for docker
+BuildRequires: autoconf
+BuildRequires: automake
+BuildRequires: pkgconfig(yajl)
+BuildRequires: pkgconfig(libselinux)
+BuildRequires: pkgconfig(mount)
+BuildRequires: go-md2man
+
+%description -n oci-systemd-hook
+OCI systemd hooks enable running systemd in an OCI runc/docker container.
+
 %prep
-%setup -qn %{name}-%{commit0}
-cp %{SOURCE6} .
+%autosetup -Sgit -n %{name}-%{commit0}
 
 # unpack %%{name}-selinux
-tar zxf %{SOURCE12}
+tar zxf %{SOURCE1}
 
 # untar d-s-s
-tar zxf %{SOURCE13}
+tar zxf %{SOURCE2}
 
 # untar forward-journald
-tar zxf %{SOURCE14}
+tar zxf %{SOURCE3}
 
-cp %{SOURCE16} .
+# untar novolume-plugin
+tar zxf %{SOURCE4}
+
+# untar rhel-push-plugin
+tar zxf %{SOURCE5}
+
+# untar lvm-plugin
+tar zxf %{SOURCE6}
+pushd %{repo}-lvm-plugin-%{commit6}/vendor
+mkdir src
+mv g* src/
+popd
+
+# untar v1.10-migrator
+tar zxf %{SOURCE7}
+
+# systemd file
+cp %{SOURCE8} .
+
+# sysconfig file
+cp %{SOURCE9} .
+
+# storage sysconfig file
+cp %{SOURCE10} .
+
+# network sysconfig file 
+cp %{SOURCE11} .
+
+# logrotate script
+cp %{SOURCE12} .
+
+# logrotate README
+cp %{SOURCE13} .
+
+# common exec script
+cp %{SOURCE14} .
+
+# common exec README
+cp %{SOURCE15} .
+
+# untar oci-register-machine
+tar zxf %{SOURCE16}
+
+# untar oci-systemd-hook
+tar zxf %{SOURCE17}
 
 %build
 mkdir _build
@@ -200,12 +367,27 @@ mkdir _build
 pushd _build
   mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic}
   ln -s $(dirs +1 -l) src/%{import_path}
-  ln -s $(dirs +1 -l)/forward-journald-%{commit6} src/%{provider}.%{provider_tld}/projectatomic/forward-journald
+  ln -s $(dirs +1 -l)/forward-journald-%{commit3} src/%{provider}.%{provider_tld}/projectatomic/forward-journald
+  ln -s $(dirs +1 -l)/%{repo}-novolume-plugin-%{commit4} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
+  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit5} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+  ln -s $(dirs +1 -l)/%{repo}-lvm-plugin-%{commit6} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
+  ln -s $(dirs +1 -l)/oci-register-machine-%{commit16} src/%{provider}.%{provider_tld}/projectatomic/oci-register-machine
+  ln -s $(dirs +1 -l)/oci-systemd-hook-%{commit17} src/%{provider}.%{provider_tld}/projectatomic/oci-systemd-hook
 popd
 
 export DOCKER_GITCOMMIT="%{shortcommit0}/%{version}"
-export DOCKER_BUILDTAGS='selinux'
-export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}:$(pwd)/forward-journald-%{commit6}/vendor
+export DOCKER_BUILDTAGS='selinux seccomp'
+export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
+export GOPATH=$GOPATH:$(pwd)/_build:$(pwd)/forward-journald-%{commit3}/vendor
+export GOPATH=$GOPATH:$(pwd)/%{repo}-novolume-plugin-%{commit4}/Godeps/_workspace
+export GOPATH=$GOPATH:$(pwd)/rhel-push-plugin-%{commit5}/Godeps/_workspace
+export GOPATH=$GOPATH:$(pwd)/%{repo}-lvm-plugin-%{commit6}/vendor
+
+# build %%{name} manpages
+man/md2man-all.sh
+go-md2man -in %{repo}-novolume-plugin-%{commit4}/man/%{repo}-novolume-plugin.8.md -out %{repo}-novolume-plugin.8
+go-md2man -in rhel-push-plugin-%{commit5}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
+go-md2man -in %{repo}-lvm-plugin-%{commit6}/man/%{repo}-lvm-plugin.8.md -out %{repo}-lvm-plugin.8
 
 # build %%{name} binary
 sed -i '/LDFLAGS_STATIC/d' hack/make/.dockerinit
@@ -214,16 +396,37 @@ cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
 
 # build %%{name}-selinux
-pushd %{name}-selinux-%{commit2}
+pushd %{name}-selinux-%{commit1}
 make SHARE="%{_datadir}" TARGETS="%{modulenames}"
 popd
 
 pushd $(pwd)/_build/src
-go build %{provider}.%{provider_tld}/projectatomic/forward-journald
+go build -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" %{provider}.%{provider_tld}/projectatomic/forward-journald
+go build -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" %{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
+go build -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+go build -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" %{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
-# build %%{name} manpages
-man/md2man-all.sh
+# build v1.10-migrator
+pushd v1.10-migrator-%{commit7}
+export GOPATH=$GOPATH:$(pwd)/Godeps/_workspace
+sed -i 's/godep //g' Makefile
+make v1.10-migrator-local
+popd
+
+# build oci-register-machine
+pushd oci-register-machine-%{commit16}
+export GOPATH=$GOPATH:$(pwd)/Godeps/_workspace
+make %{?_smp_mflags}
+popd
+
+# build oci-systemd-hook
+pushd oci-systemd-hook-%{commit17}
+aclocal
+autoreconf -i
+%configure --libexecdir=%{_libexecdir}/oci/hooks.d/
+make %{?_smp_mflags}
+popd
 
 %install
 # install binary
@@ -258,7 +461,7 @@ install -p -m 644 contrib/completion/fish/%{name}.fish %{buildroot}%{_datadir}/f
 
 # install container logrotate cron script
 install -dp %{buildroot}%{_sysconfdir}/cron.daily/
-install -p -m 755 %{SOURCE5} %{buildroot}%{_sysconfdir}/cron.daily/%{name}-logrotate
+install -p -m 755 %{SOURCE12} %{buildroot}%{_sysconfdir}/cron.daily/%{name}-logrotate
 
 # install vim syntax highlighting
 install -d %{buildroot}%{_datadir}/vim/vimfiles/{doc,ftdetect,syntax}
@@ -279,23 +482,23 @@ install -d -m 700 %{buildroot}%{_sharedstatedir}/%{name}
 
 # install systemd/init scripts
 install -d %{buildroot}%{_unitdir}
-install -p -m 644 %{SOURCE1} %{buildroot}%{_unitdir}
+install -p -m 644 %{SOURCE8} %{buildroot}%{_unitdir}
 
 # for additional args
 install -d %{buildroot}%{_sysconfdir}/sysconfig/
-install -p -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/sysconfig/%{name}
-install -p -m 644 %{SOURCE4} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-storage
-install -p -m 644 %{SOURCE7} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-network
+install -p -m 644 %{SOURCE9} %{buildroot}%{_sysconfdir}/sysconfig/%{name}
+install -p -m 644 %{SOURCE10} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-storage
+install -p -m 644 %{SOURCE11} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-network
 
 # install SELinux interfaces
 %_format INTERFACES $x.if
 install -d %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
-install -p -m 644 %{name}-selinux-%{commit2}/$INTERFACES %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
+install -p -m 644 %{name}-selinux-%{commit1}/$INTERFACES %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
 
 # install policy modules
 %_format MODULES $x.pp.bz2
 install -d %{buildroot}%{_datadir}/selinux/packages
-install -m 0644 %{name}-selinux-%{commit2}/$MODULES %{buildroot}%{_datadir}/selinux/packages
+install -m 0644 %{name}-selinux-%{commit1}/$MODULES %{buildroot}%{_datadir}/selinux/packages
 
 %if 0%{?with_unit_test}
 install -d -m 0755 %{buildroot}%{_sharedstatedir}/%{name}-unit-test/
@@ -308,25 +511,24 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 %endif
 
 # remove %%{name}-selinux rpm spec file
-rm -rf %{name}-selinux-%{commit2}/%{name}-selinux.spec
+rm -rf %{name}-selinux-%{commit1}/%{name}-selinux.spec
 
-# don't install secrets dir
-# install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+# install secrets dir
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
-mkdir -p %{buildroot}/etc/%{name}/certs.d
+mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
 
 # install %%{name} config directory
 install -dp %{buildroot}%{_sysconfdir}/%{name}/
 
 # install %%{name}-storage-setup
-pushd %{name}-storage-setup-%{commit1}
+pushd %{name}-storage-setup-%{commit2}
 install -d %{buildroot}%{_bindir}
 install -p -m 755 %{name}-storage-setup.sh %{buildroot}%{_bindir}/%{name}-storage-setup
 install -d %{buildroot}%{_unitdir}
@@ -346,13 +548,54 @@ install -p -m 700 _build/src/forward-journald %{buildroot}%{_bindir}
 
 # install %%{_bindir}/%{name}
 install -d %{buildroot}%{_bindir}
-install -p -m 755 %{SOURCE15} %{buildroot}%{_bindir}/%{name}
+install -p -m 755 %{SOURCE14} %{buildroot}%{_bindir}/%{name}
+
+# install novolume-plugin executable, unitfile, socket and man
+install -d %{buildroot}/%{_libexecdir}/%{repo}
+install -p -m 755 _build/src/%{repo}-novolume-plugin %{buildroot}/%{_libexecdir}/%{repo}/%{repo}-novolume-plugin
+install -p -m 644 %{repo}-novolume-plugin-%{commit4}/systemd/%{repo}-novolume-plugin.s* %{buildroot}%{_unitdir}
+install -d %{buildroot}%{_mandir}/man8
+install -p -m 644 %{repo}-novolume-plugin.8 %{buildroot}%{_mandir}/man8
+
+# install rhel-push-plugin executable, unitfile, socket and man
+install -d %{buildroot}%{_libexecdir}/%{repo}
+install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
+install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
+install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
+install -d %{buildroot}%{_mandir}/man8
+install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
+
+# install %%{repo}-lvm-plugin executable, unitfile, socket and man
+install -d %{buildroot}/%{_libexecdir}/%{repo}
+install -p -m 755 _build/src/%{repo}-lvm-plugin %{buildroot}/%{_libexecdir}/%{repo}/%{repo}-lvm-plugin
+install -p -m 644 %{repo}-lvm-plugin-%{commit6}/systemd/%{repo}-lvm-plugin.s* %{buildroot}%{_unitdir}
+install -d %{buildroot}%{_mandir}/man8
+install -p -m 644 %{repo}-lvm-plugin.8 %{buildroot}%{_mandir}/man8
+mkdir -p %{buildroot}%{_sysconfdir}/%{repo}
+install -p -m 644 %{repo}-lvm-plugin-%{commit6}%{_sysconfdir}/%{repo}/%{repo}-lvm-plugin %{buildroot}%{_sysconfdir}/%{repo}/%{repo}-lvm-plugin
+
+# install v1.10-migrator
+install -d %{buildroot}%{_bindir}
+install -p -m 700 v1.10-migrator-%{commit7}/v1.10-migrator-local %{buildroot}%{_bindir}
+
+# install v1.10-migrator-helper
+install -p -m 700 %{SOURCE18} %{buildroot}%{_bindir}
+
+# install oci-register-machine
+pushd oci-register-machine-%{commit16}
+install -d -p %{buildroot}%{_bindir}
+make DESTDIR=%{buildroot} install
+popd
+
+# install oci-systemd-hook
+pushd oci-systemd-hook-%{commit17}
+%make_install
 
 %check
 [ ! -w /run/%{name}.sock ] || {
     mkdir test_dir
     pushd test_dir
-    git clone https://github.com/projectatomic/docker.git -b rhel7-1.9
+    git clone https://github.com/projectatomic/docker.git -b %{docker_branch}
     pushd %{name}
     make test
     popd
@@ -401,15 +644,15 @@ fi
 %doc AUTHORS CHANGELOG.md CONTRIBUTING.md MAINTAINERS NOTICE README*.md
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}-*
 %dir %{_sysconfdir}/%{name}
-%{_sysconfdir}/%{name}/*
+%{_sysconfdir}/%{name}/certs.d
 %{_mandir}/man1/%{name}*.1.gz
 %{_mandir}/man5/*.5.gz
-%{_mandir}/man8/*.8.gz
+%{_mandir}/man8/%{name}-daemon.8.gz
 %{_bindir}/%{name}-*
-#%dir %{_datadir}/rhel
-#%{_datadir}/rhel/*
-%{_libexecdir}/%{name}
-%{_unitdir}/%{name}*
+%dir %{_datadir}/rhel
+%{_datadir}/rhel/*
+%{_unitdir}/%{name}.service
+%{_unitdir}/%{name}-storage-setup.service
 %{_datadir}/bash-completion/completions/%{name}
 %dir %{_sharedstatedir}/%{name}
 %{_udevrulesdir}/80-%{name}.rules
@@ -436,12 +679,12 @@ fi
 %{_sysconfdir}/cron.daily/%{name}-logrotate
 
 %files selinux
-%doc %{name}-selinux-%{commit2}/README.md
+%doc %{name}-selinux-%{commit1}/README.md
 %{_datadir}/selinux/*
 
 %files forward-journald
-%license forward-journald-%{commit6}/LICENSE
-%doc forward-journald-%{commit6}/README.md
+%license forward-journald-%{commit3}/LICENSE
+%doc forward-journald-%{commit3}/README.md
 %{_bindir}/forward-journald
 
 %files common
@@ -449,9 +692,155 @@ fi
 %{_bindir}/%{name}
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 
+%files novolume-plugin
+%license %{repo}-novolume-plugin-%{commit4}/LICENSE
+%doc %{repo}-novolume-plugin-%{commit4}/README.md
+%{_mandir}/man8/%{repo}-novolume-plugin.8.gz
+%{_libexecdir}/%{repo}/%{repo}-novolume-plugin
+%{_unitdir}/%{repo}-novolume-plugin.*
+
+%files rhel-push-plugin
+%license rhel-push-plugin-%{commit5}/LICENSE
+%doc rhel-push-plugin-%{commit5}/README.md
+%{_mandir}/man8/rhel-push-plugin.8.gz
+%{_libexecdir}/%{repo}/rhel-push-plugin
+%{_unitdir}/rhel-push-plugin.*
+
+%files lvm-plugin
+%license %{repo}-lvm-plugin-%{commit6}/LICENSE
+%doc %{repo}-lvm-plugin-%{commit6}/README.md
+%config(noreplace) %{_sysconfdir}/%{repo}/%{repo}-lvm-plugin
+%{_mandir}/man8/%{repo}-lvm-plugin.8.gz
+%{_libexecdir}/%{repo}/%{repo}-lvm-plugin
+%{_unitdir}/%{repo}-lvm-plugin.*
+
+%files v1.10-migrator
+%license v1.10-migrator-%{commit7}/LICENSE.{code,docs}
+%doc v1.10-migrator-%{commit7}/{CONTRIBUTING,README}.md
+%{_bindir}/v1.10-migrator-*
+
+%files -n oci-register-machine
+%license oci-register-machine-%{commit16}/LICENSE
+%doc oci-register-machine-%{commit16}/oci-register-machine.1.md
+%doc oci-register-machine-%{commit16}/README.md
+%dir %{_libexecdir}/oci
+%dir %{_libexecdir}/oci/hooks.d
+%{_libexecdir}/oci/hooks.d/oci-register-machine
+%{_mandir}/man1/oci-register-machine.1*
+
+%files -n oci-systemd-hook
+%license oci-systemd-hook-%{commit17}/LICENSE
+%doc oci-systemd-hook-%{commit17}/README.md
+%{_libexecdir}/oci/hooks.d/oci-systemd-hook
+%{_mandir}/man1/oci-systemd-hook.1*
+%dir %{_libexecdir}/oci
+%dir %{_libexecdir}/oci/hooks.d
+
 %changelog
-* Mon May 16 2016 Johnny Hughes <johnny@centos.org> - 1.9.1-40
-- Manual CentOS debreanding
+* Fri Jun 17 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-44
+- Resolves: #1311544 (bz added, no other change since -43)
+
+* Fri Jun 17 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-43
+- add MountFlags=slave to unitfile
+
+* Mon Jun 13 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-42
+- Resolves: #1344448
+- built rhel-push-plugin commit 1a0046f
+
+* Mon Jun 13 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-41
+- Resolves: #1341171 - docker should require oci-register-machine and oci-systemd-hook
+- Resolves: #1342274 - docker doesn't own /etc/docker/docker-lvm-plugin
+
+* Thu Jun 09 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-40
+- bump release tag to make it consistent with docker-latest
+ 
+* Thu Jun 09 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-39
+- bump release tag to make it consistent with docker-latest
+
+* Thu Jun 09 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-38
+- built docker projectatomic/rhel7-1.10.3 commit a46c31a
+- fixes a panic
+
+* Wed Jun 08 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-37
+- migrator doesn't require docker at runtime either
+- From: Jonathan Lebon <jlebon@redhat.com>
+
+* Wed Jun 08 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-36
+- Do not run migrator script via %%triggerin
+- If the docker daemon is already running prior, the new daemon will be
+restarted which will handle migration
+- Remove migrator subpackage from docker runtime deps
+- From: Jonathan Lebon <jlebon@redhat.com>
+
+* Wed Jun 08 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-35
+- Resolves: #1338894, #1324150, #1343702, #1339146, #1304808, #1286787,
+#1323819, #1283891, #1339164, #1328917, #1317096,
+#1318690, #1309900, #1245325
+- same as previous build, bugs referenced
+
+* Tue Jun 07 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-34
+- Patch0 in previous build has been merged in projectatomic/docker rhel7-1.10.3 branch
+- built docker projectatomic/rhel7-1.10.3 commit 6baafd8
+- define docker_branch macro to be used in %%check
+
+* Tue Jun 07 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-33
+- Patch0 used in previous build updated
+
+* Mon Jun 06 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-32
+- Resolves: #1341906 - use RWMutex to acces container store
+
+* Thu Jun 02 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-31
+- Resolves: #1342274 - update file listings to avoid file ownerships by
+multiple subpackages
+- update docker.sysconfig to include --log-driver=journald in OPTIONS
+
+* Thu Jun 02 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-30
+- Resolves: #1342149 - v1.10-migrator shipped separately in both docker and
+docker-latest
+- The v1.10-migrator subpackage in docker-latest has executables prepended 
+with 'docker-latest-', while there's no change in the ones shipped with 
+docker (RE: #1342149)
+
+* Thu Jun 02 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-29
+- Resolves: #1342149 - docker-v1.10-migrator obsoletes
+docker-latest-v1.10-migrator
+
+* Wed Jun 01 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-28
+- Resolves: #1341789 - update unitfile to use systemd for cgroups
+
+* Wed Jun 01 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-27
+- Resolves: #1341328 - include v1.10-migrator-helper script in the migrator
+subpackage
+- Resolves: #1335635 - solve log spam issues
+- built docker projectatomic/rhel7-1.10.3 commit 4779225
+- built dss commit 194eca2
+
+* Sat May 14 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-26
+- Resolves: #1341171 - add oci-register-machine and oci-systemd-hook subpackages
+- built oci-register-machine commit 7d4ce65
+- built oci-systemd-hook commit 41491a3
+
+* Sat May 14 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-25
+- docker requires docker-rhel-push-plugin
+
+* Sat May 14 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-24
+- docker unitfile updates to include rhel-push-plugin
+
+* Tue May 03 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-23
+- bump release tag to obsolete packages in docker-latest
+
+* Tue May 03 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-1
+- Resolves: #1335597 - rebase to v1.10.3 + rh patches
+- add subpackages for novolume-plugin, lvm-plugin, rhel-push-plugin, v1.10-migrator
+- BR: libseccomp-devel
+- built docker @projectatomic/rhel7-1.10.3 commit 86bbf84
+- built docker-selinux @origin/rhel7-1.10 commit 032bcda
+- built d-s-s commit df2af94
+- built forward-journald commit 77e02a9
+- built novolume-plugin commit 7715854
+- built rhel-push-plugin commit 904c0ca
+- built lvm-plugin commit 3253f53
+- built v1.10-migrator commit c417a6a
 
 * Tue May 03 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.9.1-40
 - Resolves: #1332592 - requires docker-common = version-release
