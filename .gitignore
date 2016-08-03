@@ -1,10 +1,7 @@
-SOURCES/a46c31af70ca8d15521e312ad9ef7085cfe2fd3f.tar.gz
 SOURCES/docker-lvm-plugin-3253f53.tar.gz
 SOURCES/docker-novolume-plugin-7715854.tar.gz
 SOURCES/docker-selinux-032bcda.tar.gz
-SOURCES/docker-storage-setup-194eca2.tar.gz
-SOURCES/forward-journald-77e02a9.tar.gz
-SOURCES/oci-register-machine-7d4ce65.tar.gz
-SOURCES/oci-systemd-hook-41491a3.tar.gz
-SOURCES/rhel-push-plugin-1a0046f.tar.gz
+SOURCES/docker-storage-setup-338cf62.tar.gz
+SOURCES/f9d4a2c183cb4ba202babc9f8649ea043d8c84d0.tar.gz
+SOURCES/rhel-push-plugin-4eaaf33.tar.gz
 SOURCES/v1.10-migrator-c417a6a.tar.gz
