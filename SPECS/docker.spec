@@ -43,9 +43,9 @@
 %global shortcommit4 %(c=%{commit4}; echo ${c:0:7})
 
 # rhel-push-plugin
-%global git5 https://github.com/projectatomic/rhel-push-plugin
-%global commit5 4eaaf336ed56171e82a08221e534136404a3f552
-%global shortcommit5 %(c=%{commit5}; echo ${c:0:7})
+#%global git5 https://github.com/projectatomic/rhel-push-plugin
+#%global commit5 4eaaf336ed56171e82a08221e534136404a3f552
+#%global shortcommit5 %(c=%{commit5}; echo ${c:0:7})
 
 # docker-lvm-plugin
 %global git6 https://github.com/projectatomic/%{repo}-lvm-plugin
@@ -92,7 +92,7 @@ Source0: %{git0}/archive/%{commit0}.tar.gz
 Source1: %{git1}/archive/%{commit1}/%{name}-selinux-%{shortcommit1}.tar.gz
 Source2: %{git2}/archive/%{commit2}/%{name}-storage-setup-%{shortcommit2}.tar.gz
 Source4: %{git4}/archive/%{commit4}/%{name}-novolume-plugin-%{shortcommit4}.tar.gz
-Source5: %{git5}/archive/%{commit5}/rhel-push-plugin-%{shortcommit5}.tar.gz
+#Source5: %{git5}/archive/%{commit5}/rhel-push-plugin-%{shortcommit5}.tar.gz
 Source6: %{git6}/archive/%{commit6}/%{name}-lvm-plugin-%{shortcommit6}.tar.gz
 Source7: %{git7}/archive/%{commit7}/v1.10-migrator-%{shortcommit7}.tar.gz
 Source8: %{name}.service
@@ -121,8 +121,8 @@ Requires(postun): systemd
 # need xz to work with ubuntu images
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.97
-Requires: subscription-manager
-Requires: %{name}-rhel-push-plugin = %{version}-%{release}
+#Requires: subscription-manager
+#Requires: %{name}-rhel-push-plugin = %{version}-%{release}
 Requires: oci-register-machine >= 1:0-1.8
 Requires: oci-systemd-hook >= 1:0.1.4-4
 Provides: lxc-%{name} = %{version}-%{release}
@@ -213,16 +213,16 @@ local volumes defined. In particular, the plugin will block `docker run` with:
 
 The only thing allowed will be just bind mounts.
 
-%package rhel-push-plugin
-License: GPLv2
-Summary: Avoids pushing a RHEL-based image to docker.io registry
+#%package rhel-push-plugin
+#License: GPLv2
+#Summary: Avoids pushing a RHEL-based image to docker.io registry
 
-%description rhel-push-plugin
-In order to use this plugin you must be running at least Docker 1.10 which
-has support for authorization plugins.
+#%description rhel-push-plugin
+#In order to use this plugin you must be running at least Docker 1.10 which
+#has support for authorization plugins.
 
-This plugin avoids any RHEL based image to be pushed to the default docker.io
-registry preventing users to violate the RH subscription agreement.
+#This plugin avoids any RHEL based image to be pushed to the default docker.io
+#registry preventing users to violate the RH subscription agreement.
 
 %package lvm-plugin
 License: LGPLv3
@@ -268,7 +268,7 @@ tar zxf %{SOURCE2}
 tar zxf %{SOURCE4}
 
 # untar rhel-push-plugin
-tar zxf %{SOURCE5}
+#tar zxf %{SOURCE5}
 
 # untar lvm-plugin
 tar zxf %{SOURCE6}
@@ -311,7 +311,7 @@ pushd _build
   mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic}
   ln -s $(dirs +1 -l) src/%{import_path}
   ln -s $(dirs +1 -l)/%{repo}-novolume-plugin-%{commit4} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
-  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit5} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+#  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit5} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
   ln -s $(dirs +1 -l)/%{repo}-lvm-plugin-%{commit6} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
@@ -320,13 +320,13 @@ export DOCKER_BUILDTAGS='selinux seccomp'
 export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
 export GOPATH=$GOPATH:$(pwd)/_build
 export GOPATH=$GOPATH:$(pwd)/%{repo}-novolume-plugin-%{commit4}/Godeps/_workspace
-export GOPATH=$GOPATH:$(pwd)/rhel-push-plugin-%{commit5}/Godeps/_workspace
+#export GOPATH=$GOPATH:$(pwd)/rhel-push-plugin-%{commit5}/Godeps/_workspace
 export GOPATH=$GOPATH:$(pwd)/%{repo}-lvm-plugin-%{commit6}/vendor
 
 # build %%{name} manpages
 man/md2man-all.sh
 go-md2man -in %{repo}-novolume-plugin-%{commit4}/man/%{repo}-novolume-plugin.8.md -out %{repo}-novolume-plugin.8
-go-md2man -in rhel-push-plugin-%{commit5}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
+#go-md2man -in rhel-push-plugin-%{commit5}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
 go-md2man -in %{repo}-lvm-plugin-%{commit6}/man/%{repo}-lvm-plugin.8.md -out %{repo}-lvm-plugin.8
 
 # build %%{name} binary
@@ -342,7 +342,7 @@ popd
 
 pushd $(pwd)/_build/src
 go build -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" %{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
-go build -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+#go build -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
 go build -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" %{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
@@ -439,15 +439,16 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 rm -rf %{name}-selinux-%{commit1}/%{name}-selinux.spec
 
 # install secrets dir
-install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
+#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
+mkdir -p %{buildroot}/etc/%{name}/certs.d
 
 # install %%{name} config directory
 install -dp %{buildroot}%{_sysconfdir}/%{name}/
@@ -479,12 +480,12 @@ install -d %{buildroot}%{_mandir}/man8
 install -p -m 644 %{repo}-novolume-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install rhel-push-plugin executable, unitfile, socket and man
-install -d %{buildroot}%{_libexecdir}/%{repo}
-install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
-install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
-install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
-install -d %{buildroot}%{_mandir}/man8
-install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
+#install -d %{buildroot}%{_libexecdir}/%{repo}
+#install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
+#install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
+#install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
+#install -d %{buildroot}%{_mandir}/man8
+#install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install %%{repo}-lvm-plugin executable, unitfile, socket and man
 install -d %{buildroot}/%{_libexecdir}/%{repo}
@@ -560,8 +561,8 @@ fi
 %{_mandir}/man5/*.5.gz
 %{_mandir}/man8/%{name}-daemon.8.gz
 %{_bindir}/%{name}-*
-%dir %{_datadir}/rhel
-%{_datadir}/rhel/*
+#%dir %{_datadir}/rhel
+#%{_datadir}/rhel/*
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}-storage-setup.service
 %{_datadir}/bash-completion/completions/%{name}
@@ -605,12 +606,12 @@ fi
 %{_libexecdir}/%{repo}/%{repo}-novolume-plugin
 %{_unitdir}/%{repo}-novolume-plugin.*
 
-%files rhel-push-plugin
-%license rhel-push-plugin-%{commit5}/LICENSE
-%doc rhel-push-plugin-%{commit5}/README.md
-%{_mandir}/man8/rhel-push-plugin.8.gz
-%{_libexecdir}/%{repo}/rhel-push-plugin
-%{_unitdir}/rhel-push-plugin.*
+#%files rhel-push-plugin
+#%license rhel-push-plugin-%{commit5}/LICENSE
+#%doc rhel-push-plugin-%{commit5}/README.md
+#%{_mandir}/man8/rhel-push-plugin.8.gz
+#%{_libexecdir}/%{repo}/rhel-push-plugin
+#%{_unitdir}/rhel-push-plugin.*
 
 %files lvm-plugin
 %license %{repo}-lvm-plugin-%{commit6}/LICENSE
@@ -626,6 +627,9 @@ fi
 %{_bindir}/v1.10-migrator-*
 
 %changelog
+* Fri Sep 16 2016 Johnny Hughes <johnny@centos.org> - 1.10.3-46.14
+- Manual CentOS Debranding
+
 * Mon Aug 29 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-46.14
 - Resolves: #1368999
 - built docker projectatomic/rhel7-1.10.3 commit 58b3879
