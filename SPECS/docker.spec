@@ -27,13 +27,13 @@
 %global docker_branch rhel7-1.10.3
 
 # docker-selinux
-%global git1 https://github.com/lsm5/docker-selinux
-%global commit1 583a67ffdf9eef9afc233ace0f841d5eeef28fb3
+%global git1 https://github.com/projectatomic/container-selinux
+%global commit1 98617f3f20e14904d890cb6340c9afb08bace332
 %global shortcommit1 %(c=%{commit1}; echo ${c:0:7})
 
 # d-s-s
 %global git2 https://github.com/projectatomic/docker-storage-setup
-%global commit2 95194cb49798cdc17bda1c8a385faec87470f174
+%global commit2 0d53efa70ad237596a29496076eaf4ae026d3762
 %global shortcommit2 %(c=%{commit2}; echo ${c:0:7})
 %global dss_libdir %{_exec_prefix}/lib/%{name}-storage-setup
 
@@ -49,7 +49,7 @@
 
 # rhel-push-plugin
 %global git5 https://github.com/projectatomic/rhel-push-plugin
-%global commit5 d89861de25fe5934e7f698195826fda954c5bb28
+%global commit5 eb9e6beb8767a4a102e011c2d6e70394629dfa91
 %global shortcommit5 %(c=%{commit5}; echo ${c:0:7})
 
 # docker-lvm-plugin
@@ -61,7 +61,7 @@
 # Some bits borrowed from the openstack-selinux package
 %global selinuxtype targeted
 %global moduletype services
-%global modulenames %{name}
+%global modulenames container
 
 # Usage: _format var format
 # Expand 'modulenames' into various formats as needed
@@ -79,8 +79,9 @@
 %endif
 
 Name: %{repo}
+Epoch: 2
 Version: 1.10.3
-Release: 57%{?dist}
+Release: 59%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -115,7 +116,7 @@ BuildRequires: sqlite-devel
 BuildRequires: go-md2man >= 1.0.4
 BuildRequires: pkgconfig(systemd)
 BuildRequires: libseccomp-devel
-Requires: %{name}-common = %{version}-%{release}
+Requires: %{name}-common = %{epoch}:%{version}-%{release}
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
@@ -123,15 +124,15 @@ Requires(postun): systemd
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.97
 Requires: subscription-manager
-Requires: %{name}-rhel-push-plugin = %{version}-%{release}
+Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
 Requires: oci-register-machine >= 1:0-1.8
 Requires: oci-systemd-hook >= 1:0.1.4-5
-Provides: lxc-%{name} = %{version}-%{release}
-Provides: %{name}-io = %{version}-%{release}
+Provides: lxc-%{name} = %{epoch}:%{version}-%{release}
+Provides: %{name}-io = %{epoch}:%{version}-%{release}
 
 # RE: rhbz#1195804 - ensure min NVR for selinux-policy
 Requires(pre): selinux-policy >= %{selinux_policyver}
-Requires(pre): %{name}-selinux >= %{version}-%{release}
+Requires(pre): container-selinux >= %{epoch}:%{version}-%{release}
 
 # rhbz#1214070 - update deps for d-s-s
 Requires: lvm2 >= 2.02.112
@@ -160,8 +161,8 @@ Summary: %{summary} - for running unit tests
 
 %package logrotate
 Summary: cron job to run logrotate on Docker containers
-Requires: %{name} = %{version}-%{release}
-Provides: %{name}-io-logrotate = %{version}-%{release}
+Requires: %{name} = %{epoch}:%{version}-%{release}
+Provides: %{name}-io-logrotate = %{epoch}:%{version}-%{release}
 
 %description logrotate
 This package installs %{summary}. logrotate is assumed to be installed on
@@ -182,8 +183,8 @@ The migration usually runs on daemon startup but it can be quite slow(usually
 that time. You can run this tool instead while the old daemon is still
 running and skip checksum calculation on startup.
 
-%package selinux
-Summary: SELinux policies for Docker
+%package -n container-selinux
+Summary: SELinux policies for container runtimes
 BuildRequires: selinux-policy >= %{selinux_policyver}
 BuildRequires: selinux-policy-devel >= %{selinux_policyver}
 Requires(post): selinux-policy-base >= %{selinux_policyver}
@@ -191,10 +192,11 @@ Requires(post): selinux-policy-targeted >= %{selinux_policyver}
 Requires(post): policycoreutils
 Requires(post): policycoreutils-python
 Requires(post): libselinux-utils
-Provides: %{name}-io-selinux = %{version}-%{release}
+Provides: %{name}-io-selinux = %{epoch}:%{version}-%{release}
+Provides: %{name}-selinux = %{epoch}:%{version}-%{release}
 
-%description selinux
-SELinux policy modules for use with Docker.
+%description -n container-selinux
+SELinux policy modules for use with container runtimes.
 
 %package common
 Summary: Common files for docker and docker-latest
@@ -208,7 +210,7 @@ This package contains the common files %{_bindir}/%{name} which will point to
 URL: %{git4}
 License: MIT
 Summary: Block container starts with local volumes defined
-Requires: %{name} = %{version}-%{release}
+Requires: %{name} = %{epoch}:%{version}-%{release}
 
 %description novolume-plugin
 When a volume in provisioned via the `VOLUME` instruction in a Dockerfile or
@@ -243,7 +245,7 @@ registry preventing users to violate the RH subscription agreement.
 %package lvm-plugin
 License: LGPLv3
 Summary: Docker volume driver for lvm volumes
-Requires: %{name} = %{version}-%{release}
+Requires: %{name} = %{epoch}:%{version}-%{release}
 
 %description lvm-plugin
 Docker Volume Driver for lvm volumes.
@@ -254,7 +256,7 @@ then be bind mounted into the container using `docker run` command.
 %prep
 %autosetup -Sgit -n %{name}-%{commit0}
 
-# unpack %%{name}-selinux
+# unpack container-selinux
 tar zxf %{SOURCE1}
 
 # untar d-s-s
@@ -324,13 +326,8 @@ IAMSTATIC=false DOCKER_DEBUG=1 hack/make.sh dynbinary
 cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
 
-# build %%{name}-selinux
-pushd %{name}-selinux-%{commit1}
-
-echo "" >> docker.te
-echo "kernel_unlabeled_domtrans(docker_t, spc_t)" >> docker.te
-echo "kernel_unlabeled_entry_type(spc_t)" >> docker.te
-
+# build container-selinux
+pushd container-selinux-%{commit1}
 make SHARE="%{_datadir}" TARGETS="%{modulenames}"
 popd
 
@@ -416,12 +413,12 @@ install -p -m 644 %{SOURCE11} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-netwo
 # install SELinux interfaces
 %_format INTERFACES $x.if
 install -d %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
-install -p -m 644 %{name}-selinux-%{commit1}/$INTERFACES %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
+install -p -m 644 container-selinux-%{commit1}/$INTERFACES %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
 
 # install policy modules
 %_format MODULES $x.pp.bz2
 install -d %{buildroot}%{_datadir}/selinux/packages
-install -m 0644 %{name}-selinux-%{commit1}/$MODULES %{buildroot}%{_datadir}/selinux/packages
+install -m 0644 container-selinux-%{commit1}/$MODULES %{buildroot}%{_datadir}/selinux/packages
 
 %if 0%{?with_unit_test}
 install -d -m 0755 %{buildroot}%{_sharedstatedir}/%{name}-unit-test/
@@ -433,8 +430,8 @@ done
 rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{name}.initd
 %endif
 
-# remove %%{name}-selinux rpm spec file
-rm -rf %{name}-selinux-%{commit1}/%{name}-selinux.spec
+# remove container-selinux rpm spec file
+rm -rf container-selinux-%{commit1}/container-selinux.spec
 
 # install secrets dir
 install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
@@ -518,10 +515,10 @@ exit 0
 %post
 %systemd_post %{name}.service
 
-%post selinux
+%post -n container-selinux
 # Install all modules in a single transaction
 %_format MODULES %{_datadir}/selinux/packages/$x.pp.bz2
-%{_sbindir}/semodule -n --priority=200 -s %{selinuxtype} -i $MODULES > /dev/null
+%{_sbindir}/semodule -n -X 200 -s %{selinuxtype} -i $MODULES -X 100 -r %{repo} -X 200 -r %{repo} -X 400 -r %{repo} > /dev/null
 if %{_sbindir}/selinuxenabled ; then
     %{_sbindir}/load_policy
     %relabel_files
@@ -536,9 +533,9 @@ fi
 %postun
 %systemd_postun_with_restart %{name}.service
 
-%postun selinux
+%postun -n container-selinux
 if [ $1 -eq 0 ]; then
-%{_sbindir}/semodule -n -r %{modulenames} &> /dev/null || :
+%{_sbindir}/semodule -X 200 -n -r %{modulenames} &> /dev/null || :
 if %{_sbindir}/selinuxenabled ; then
 %{_sbindir}/load_policy
 %relabel_files
@@ -587,8 +584,8 @@ fi
 %doc README.%{name}-logrotate
 %{_sysconfdir}/cron.daily/%{name}-logrotate
 
-%files selinux
-%doc %{name}-selinux-%{commit1}/README.md
+%files -n container-selinux
+%doc container-selinux-%{commit1}/README.md
 %{_datadir}/selinux/*
 
 %files common
@@ -625,6 +622,21 @@ fi
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
+* Sat Nov 19 2016 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.10.3-59
+- correct typo
+
+* Fri Nov 18 2016 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.10.3-58
+- Resolves: #1382997 - correctly remove docker-selinux policies when the
+subpackage is removed, remove docker policy if it is installed at 100, 200 or
+400 levels
+- Resolves: #1346206 - do not override DOCKER_CERT_PATH if it's already set
+- Resolves: #1389328, #1393443 - rhel-push-plugin fixes
+- bump Epoch to 2, since the recent 1.12.3 was already on Epoch: 1
+- move docker-selinux to container-selinux   
+- built rhel-push-plugin commit eb9e6be
+- built container-selinux origin/RHEL-1.12 commit 98617f3
+- built dss commit 0d53efa
+
 * Thu Oct 20 2016 Lokesh Mandvekar <lsm5@redhat.com> - 1.10.3-57
 - Resolves: #1385641 - additional policy rules for RHEL rpms
 

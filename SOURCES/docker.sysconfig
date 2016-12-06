@@ -2,7 +2,9 @@
 
 # Modify these options if you want to change the way the docker daemon runs
 OPTIONS='--selinux-enabled --log-driver=journald'
-DOCKER_CERT_PATH=/etc/docker
+if [ -z "${DOCKER_CERT_PATH}" ]; then
+    DOCKER_CERT_PATH=/etc/docker
+fi
 
 # If you want to add your own registry to be used for docker search and docker
 # pull use the ADD_REGISTRY option to list a set of registries, each prepended
