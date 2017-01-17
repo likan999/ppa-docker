@@ -1,7 +1,7 @@
 # /etc/sysconfig/docker
 
 # Modify these options if you want to change the way the docker daemon runs
-OPTIONS='--selinux-enabled --log-driver=journald'
+OPTIONS='--selinux-enabled --log-driver=journald --signature-verification=false'
 if [ -z "${DOCKER_CERT_PATH}" ]; then
     DOCKER_CERT_PATH=/etc/docker
 fi
@@ -38,5 +38,7 @@ ADD_REGISTRY='--add-registry registry.access.redhat.com'
 #
 
 # docker-latest daemon can be used by starting the docker-latest unitfile.
-# To use docker-latest client, uncomment below line
+# To use docker-latest client, uncomment below lines
 #DOCKERBINARY=/usr/bin/docker-latest
+#DOCKER_CONTAINERD_BINARY=/usr/bin/docker-containerd-latest
+#DOCKER_CONTAINERD_SHIM_BINARY=/usr/bin/docker-containerd-shim-latest
