@@ -25,20 +25,14 @@
 
 # docker
 %global git0 https://github.com/projectatomic/%{repo}
-%global commit0 047e51b797564227b0bf26f3aa448f563bea5c71
+%global commit0 96d83a5ff6ec0eb9bb7b45192c3048fd3aef5e21
 %global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
 # docker_branch used in %%check
 %global docker_branch %{name}-%{version}
 
-# docker-selinux
-%global git1 https://github.com/projectatomic/container-selinux
-# use RHEL-1.12 branch
-%global commit1 58209b8325161be11d38898d7d1a3c45101b75e4
-%global shortcommit1 %(c=%{commit1}; echo ${c:0:7})
-
 # d-s-s
 %global git2 https://github.com/projectatomic/%{repo}-storage-setup
-%global commit2 6709fe6c6b0d154063799364eb1a944d065bab93
+%global commit2 f7a37469b09b841e630f06e4c149fae345f66fbd
 %global shortcommit2 %(c=%{commit2}; echo ${c:0:7})
 %global dss_libdir %{_exec_prefix}/lib/%{name}-storage-setup
 
@@ -53,9 +47,9 @@
 %global shortcommit4 %(c=%{commit4}; echo ${c:0:7})
 
 # rhel-push-plugin
-#%global git5 https://github.com/projectatomic/rhel-push-plugin
-#%global commit5 eb9e6beb8767a4a102e011c2d6e70394629dfa91
-#%global shortcommit5 %(c=%{commit5}; echo ${c:0:7})
+%global git5 https://github.com/projectatomic/rhel-push-plugin
+%global commit5 70653ed7cbef7623ab850d09f0257a6b670582ce
+%global shortcommit5 %(c=%{commit5}; echo ${c:0:7})
 
 # docker-lvm-plugin
 %global git6 https://github.com/projectatomic/%{repo}-lvm-plugin
@@ -64,7 +58,7 @@
 
 # docker-runc
 %global git7 https://github.com/projectatomic/runc
-%global commit7 b8dbc3b8e8d868723aec2fd5082e6547ec66cf58
+%global commit7 81b254244390bc636b20c87c34a3d9e1a8645069
 %global shortcommit7 %(c=%{commit7}; echo ${c:0:7})
 
 # docker-containerd
@@ -72,43 +66,18 @@
 %global commit8 471f03c11413d9ab1523de24d3e79ae3a7b8126e
 %global shortcommit8 %(c=%{commit8}; echo ${c:0:7})
 
-# %%{name}-selinux stuff (prefix with ds_ for version/release etc.)
-# Some bits borrowed from the openstack-selinux package
-%global selinuxtype targeted
-%global moduletype services
-%global modulenames container
-
-# Usage: _format var format
-# Expand 'modulenames' into various formats as needed
-# Format must contain '$x' somewhere to do anything useful
-%global _format() export %1=""; for x in %{modulenames}; do %1+=%2; %1+=" "; done;
-
-# Relabel files
-%global relabel_files() %{_sbindir}/restorecon -R %{_bindir}/%{repo}* %{_localstatedir}/run/containerd.sock %{_localstatedir}/run/%{repo}.sock %{_localstatedir}/run/%{repo}.pid %{_sysconfdir}/%{repo} %{_localstatedir}/log/%{repo} %{_localstatedir}/log/lxc %{_localstatedir}/lock/lxc %{_unitdir}/%{repo}.service %{_unitdir}/%{repo}-containerd.service %{_unitdir}/%{repo}-latest.service %{_unitdir}/%{repo}-latest-containerd.service %{_sysconfdir}/%{repo} %{_libexecdir}/%{repo}* &> /dev/null || :
-
-# Version of SELinux we were using
-%if 0%{?fedora} >= 22
-%global selinux_policyver 3.13.1-119
-%else
-%global selinux_policyver 3.13.1-97
-%endif
-
 Name: %{repo}
 Epoch: 2
-Version: 1.12.5
-Release: 14%{?dist}
+Version: 1.12.6
+Release: 11%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
-# only x86_64 for now: https://%%{provider}.%%{provider_tld}/%%{name}/%%{name}/issues/136
 ExclusiveArch: x86_64
-# Branch used available at
-# https://%%{provider}.%%{provider_tld}/projectatomic/%%{name}/commits/rhel7-1.10.3
 Source0: %{git0}/archive/%{commit0}.tar.gz
-Source1: %{git1}/archive/%{commit1}/container-selinux-%{shortcommit1}.tar.gz
 Source2: %{git2}/archive/%{commit2}/%{repo}-storage-setup-%{shortcommit2}.tar.gz
 Source4: %{git4}/archive/%{commit4}/%{repo}-novolume-plugin-%{shortcommit4}.tar.gz
-#/Source5: %{git5}/archive/%{commit5}/rhel-push-plugin-%{shortcommit5}.tar.gz
+Source5: %{git5}/archive/%{commit5}/rhel-push-plugin-%{shortcommit5}.tar.gz
 Source6: %{git6}/archive/%{commit6}/%{repo}-lvm-plugin-%{shortcommit6}.tar.gz
 Source8: %{name}.service
 Source9: %{name}.sysconfig
@@ -118,7 +87,6 @@ Source12: %{name}-logrotate.sh
 Source13: README.%{name}-logrotate
 Source14: %{name}-common.sh
 Source15: README-%{name}-common
-Source16: %{name}-cleanup.sh
 Source17: %{git3}/archive/%{commit3}/v1.10-migrator-%{shortcommit3}.tar.gz
 Source18: v1.10-migrator-helper
 Source19: %{git7}/archive/%{commit7}/runc-%{shortcommit7}.tar.gz
@@ -126,7 +94,9 @@ Source20: %{git8}/archive/%{commit8}/containerd-%{shortcommit8}.tar.gz
 Source21: %{name}-containerd-common.sh
 Source22: %{name}-containerd-shim-common.sh
 Source23: daemon.json
-Patch0: 0001-Set-init-processes-as-non-dumpable.patch
+Source24: %{name}d-common.sh
+Source25: %{name}-cleanup.service
+Source26: %{name}-cleanup.timer
 BuildRequires: git
 BuildRequires: glibc-static
 BuildRequires: golang >= 1.7.4
@@ -144,19 +114,16 @@ Requires: %{name}-client = %{epoch}:%{version}-%{release}
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
-# need xz to work with ubuntu images
 Requires: xz
 Requires: device-mapper-libs >= 7:1.02.97
-#Requires: subscription-manager
-#Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
+Requires: subscription-manager
+Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
 Requires: oci-register-machine >= 1:0-1.11
-Requires: oci-systemd-hook >= 1:0.1.4-8
+Requires: oci-systemd-hook >= 1:0.1.4-9
 Provides: lxc-%{name} = %{epoch}:%{version}-%{release}
 Provides: %{name}-io = %{epoch}:%{version}-%{release}
 
-# RE: rhbz#1195804 - ensure min NVR for selinux-policy
-Requires(pre): selinux-policy >= %{selinux_policyver}
-Requires(pre): container-selinux >= %{epoch}:%{version}-%{release}
+Requires(pre): container-selinux >= 2:2.9-4
 
 # rhbz#1214070 - update deps for d-s-s
 Requires: lvm2 >= 2.02.112
@@ -210,21 +177,6 @@ The migration usually runs on daemon startup but it can be quite slow(usually
 that time. You can run this tool instead while the old daemon is still
 running and skip checksum calculation on startup.
 
-%package -n container-selinux
-Summary: SELinux policies for container runtimes
-BuildRequires: selinux-policy >= %{selinux_policyver}
-BuildRequires: selinux-policy-devel >= %{selinux_policyver}
-Requires(post): selinux-policy-base >= %{selinux_policyver}
-Requires(post): selinux-policy-targeted >= %{selinux_policyver}
-Requires(post): policycoreutils
-Requires(post): policycoreutils-python
-Requires(post): libselinux-utils
-Provides: %{name}-io-selinux = %{epoch}:%{version}-%{release}
-Provides: %{name}-selinux = %{epoch}:%{version}-%{release}
-
-%description -n container-selinux
-SELinux policy modules for use with container runtimes.
-
 %package common
 Summary: Common files for docker and docker-latest
 
@@ -266,16 +218,16 @@ local volumes defined. In particular, the plugin will block `docker run` with:
 
 The only thing allowed will be just bind mounts.
 
-#%package rhel-push-plugin
-#License: GPLv2
-#Summary: Avoids pushing a RHEL-based image to docker.io registry
+%package rhel-push-plugin
+License: GPLv2
+Summary: Avoids pushing a RHEL-based image to docker.io registry
 
-#%description rhel-push-plugin
-#In order to use this plugin you must be running at least Docker 1.10 which
-#has support for authorization plugins.
+%description rhel-push-plugin
+In order to use this plugin you must be running at least Docker 1.10 which
+has support for authorization plugins.
 
-#This plugin avoids any RHEL based image to be pushed to the default docker.io
-#registry preventing users to violate the RH subscription agreement.
+This plugin avoids any RHEL based image to be pushed to the default docker.io
+registry preventing users to violate the RH subscription agreement.
 
 %package lvm-plugin
 License: LGPLv3
@@ -291,9 +243,6 @@ then be bind mounted into the container using `docker run` command.
 %prep
 %setup -q -n %{name}-%{commit0}
 
-# unpack container-selinux
-tar zxf %{SOURCE1}
-
 # untar d-s-s
 tar zxf %{SOURCE2}
 
@@ -301,7 +250,7 @@ tar zxf %{SOURCE2}
 tar zxf %{SOURCE4}
 
 # untar rhel-push-plugin
-#tar zxf %{SOURCE5}
+tar zxf %{SOURCE5}
 
 # untar lvm-plugin
 tar zxf %{SOURCE6}
@@ -333,9 +282,6 @@ tar zxf %{SOURCE17}
 
 # untar docker-runc
 tar zxf %{SOURCE19}
-pushd runc-%{commit7}
-%patch0 -p1
-popd
 
 # untar docker-containerd
 tar zxf %{SOURCE20}
@@ -347,7 +293,7 @@ pushd _build
   mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic}
   ln -s $(dirs +1 -l) src/%{import_path}
   ln -s $(dirs +1 -l)/%{repo}-novolume-plugin-%{commit4} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
-#  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit5} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit5} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
   ln -s $(dirs +1 -l)/%{repo}-lvm-plugin-%{commit6} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
@@ -356,10 +302,10 @@ pushd $(pwd)/_build/src
 %gobuild %{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
 popd
 
-#export GOPATH=$(pwd)/rhel-push-plugin-%{commit5}/Godeps/_workspace:$(pwd)/_build
-#pushd $(pwd)/_build/src
-#%gobuild %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
-#popd
+export GOPATH=$(pwd)/rhel-push-plugin-%{commit5}/Godeps/_workspace:$(pwd)/_build
+pushd $(pwd)/_build/src
+%gobuild %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+popd
 
 export GOPATH=$(pwd)/%{repo}-lvm-plugin-%{commit6}/vendor:$(pwd)/_build
 pushd $(pwd)/_build/src
@@ -373,18 +319,13 @@ export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
 # build %%{name} manpages
 man/md2man-all.sh
 go-md2man -in %{repo}-novolume-plugin-%{commit4}/man/%{repo}-novolume-plugin.8.md -out %{repo}-novolume-plugin.8
-#go-md2man -in rhel-push-plugin-%{commit5}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
+go-md2man -in rhel-push-plugin-%{commit5}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
 go-md2man -in %{repo}-lvm-plugin-%{commit6}/man/%{repo}-lvm-plugin.8.md -out %{repo}-lvm-plugin.8
 
 # build %%{name} binary
 IAMSTATIC=false DOCKER_DEBUG=1 hack/make.sh dynbinary
 cp contrib/syntax/vim/LICENSE LICENSE-vim-syntax
 cp contrib/syntax/vim/README.md README-vim-syntax.md
-
-# build container-selinux
-pushd container-selinux-%{commit1}
-make SHARE="%{_datadir}" TARGETS="%{modulenames}"
-popd
 
 # build v1.10-migrator
 pushd v1.10-migrator-%{commit3}
@@ -452,10 +393,6 @@ install -p -m 644 contrib/completion/fish/%{name}.fish %{buildroot}%{_datadir}/f
 install -dp %{buildroot}%{_sysconfdir}/cron.daily/
 install -p -m 755 %{SOURCE12} %{buildroot}%{_sysconfdir}/cron.daily/%{name}-logrotate
 
-# install dead container cleanup script
-install -dp %{buildroot}%{_sysconfdir}/cron.hourly/
-install -p -m 755 %{SOURCE16} %{buildroot}%{_sysconfdir}/cron.hourly/%{name}-cleanup
-
 # install vim syntax highlighting
 install -d %{buildroot}%{_datadir}/vim/vimfiles/{doc,ftdetect,syntax}
 install -p -m 644 contrib/syntax/vim/doc/%{name}file.txt %{buildroot}%{_datadir}/vim/vimfiles/doc
@@ -476,22 +413,14 @@ install -d -m 700 %{buildroot}%{_sharedstatedir}/%{name}
 # install systemd/init scripts
 install -d %{buildroot}%{_unitdir}
 install -p -m 644 %{SOURCE8} %{buildroot}%{_unitdir}
+install -p -m 644 %{SOURCE25} %{buildroot}%{_unitdir}
+install -p -m 644 %{SOURCE26} %{buildroot}%{_unitdir}
 
 # for additional args
 install -d %{buildroot}%{_sysconfdir}/sysconfig/
 install -p -m 644 %{SOURCE9} %{buildroot}%{_sysconfdir}/sysconfig/%{name}
 install -p -m 644 %{SOURCE10} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-storage
 install -p -m 644 %{SOURCE11} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-network
-
-# install SELinux interfaces
-%_format INTERFACES $x.if
-install -d %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
-install -p -m 644 container-selinux-%{commit1}/$INTERFACES %{buildroot}%{_datadir}/selinux/devel/include/%{moduletype}
-
-# install policy modules
-%_format MODULES $x.pp.bz2
-install -d %{buildroot}%{_datadir}/selinux/packages
-install -m 0644 container-selinux-%{commit1}/$MODULES %{buildroot}%{_datadir}/selinux/packages
 
 %if 0%{?with_unit_test}
 install -d -m 0755 %{buildroot}%{_sharedstatedir}/%{name}-unit-test/
@@ -503,15 +432,12 @@ done
 rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{name}.initd
 %endif
 
-# remove container-selinux rpm spec file
-rm -rf container-selinux-%{commit1}/container-selinux.spec
-
 # install secrets dir
-#install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
+install -d -p -m 750 %{buildroot}/%{_datadir}/rhel/secrets
 # rhbz#1110876 - update symlinks for subscription management
-#ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
-#ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
-#ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
+ln -s %{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/secrets/etc-pki-entitlement
+ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
+ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
 mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
 ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
@@ -529,6 +455,7 @@ popd
 # install %%{_bindir}/%%{name}
 install -d %{buildroot}%{_bindir}
 install -p -m 755 %{SOURCE14} %{buildroot}%{_bindir}/%{name}
+install -p -m 755 %{SOURCE24} %{buildroot}%{_bindir}/%{name}d
 install -p -m 755 %{SOURCE21} %{buildroot}%{_bindir}/%{name}-containerd
 install -p -m 755 %{SOURCE22} %{buildroot}%{_bindir}/%{name}-containerd-shim
 
@@ -540,12 +467,12 @@ install -d %{buildroot}%{_mandir}/man8
 install -p -m 644 %{repo}-novolume-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install rhel-push-plugin executable, unitfile, socket and man
-#install -d %{buildroot}%{_libexecdir}/%{repo}
-#install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
-#install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
-#install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
-#install -d %{buildroot}%{_mandir}/man8
-#install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
+install -d %{buildroot}%{_libexecdir}/%{repo}
+install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
+install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
+install -p -m 644 rhel-push-plugin-%{commit5}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
+install -d %{buildroot}%{_mandir}/man8
+install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install %%{repo}-lvm-plugin executable, unitfile, socket and man
 install -d %{buildroot}/%{_libexecdir}/%{repo}
@@ -590,35 +517,38 @@ exit 0
 %post
 %systemd_post %{name}.service
 
-%post -n container-selinux
-# Install all modules in a single transaction
-%_format MODULES %{_datadir}/selinux/packages/$x.pp.bz2
-%{_sbindir}/semodule -n -s %{selinuxtype} -r container 2> /dev/null
-%{_sbindir}/semodule -n -s %{selinuxtype} -d %{repo} 2> /dev/null
-%{_sbindir}/semodule -n -s %{selinuxtype} -d gear 2> /dev/null
-%{_sbindir}/semodule -n -X 200 -s %{selinuxtype} -i $MODULES > /dev/null
-if %{_sbindir}/selinuxenabled ; then
-    %{_sbindir}/load_policy
-    %relabel_files
-    if [ $1 -eq 1 ]; then
-    restorecon -R %{_sharedstatedir}/%{name} &> /dev/null || :
-    fi
-fi
-
 %preun
 %systemd_preun %{name}.service
 
 %postun
 %systemd_postun_with_restart %{name}.service
 
-%postun -n container-selinux
-if [ $1 -eq 0 ]; then
-%{_sbindir}/semodule -X 200 -n -r %{modulenames} &> /dev/null || :
-if %{_sbindir}/selinuxenabled ; then
-%{_sbindir}/load_policy
-%relabel_files
-fi
-fi
+%post lvm-plugin
+%systemd_post %{name}-lvm-plugin.service
+
+%preun lvm-plugin
+%systemd_preun %{name}-lvm-plugin.service
+
+%postun lvm-plugin
+%systemd_postun_with_restart %{name}-lvm-plugin.service
+
+%post novolume-plugin
+%systemd_post %{name}-novolume-plugin.service
+
+%preun novolume-plugin
+%systemd_preun %{name}-novolume-plugin.service
+
+%postun novolume-plugin
+%systemd_postun_with_restart %{name}-novolume-plugin.service
+
+%post rhel-push-plugin
+%systemd_post rhel-push-plugin.service
+
+%preun rhel-push-plugin
+%systemd_preun rhel-push-plugin.service
+
+%postun rhel-push-plugin
+%systemd_postun_with_restart rhel-push-plugin.service
 
 #define license tag if not already defined
 %{!?_licensedir:%global license %doc}
@@ -637,10 +567,12 @@ fi
 %{_mandir}/man1/%{name}*.1.gz
 %{_mandir}/man5/*.5.gz
 %{_mandir}/man8/%{name}d.8.gz
-#%dir %{_datadir}/rhel
-#%{_datadir}/rhel/*
+%dir %{_datadir}/rhel
+%{_datadir}/rhel/*
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}-storage-setup.service
+%{_unitdir}/%{name}-cleanup.service
+%{_unitdir}/%{name}-cleanup.timer
 %{_datadir}/bash-completion/completions/%{name}
 %dir %{_sharedstatedir}/%{name}
 %{_udevrulesdir}/80-%{name}.rules
@@ -671,19 +603,15 @@ fi
 %doc README.%{name}-logrotate
 %{_sysconfdir}/cron.daily/%{name}-logrotate
 
-%files -n container-selinux
-%doc container-selinux-%{commit1}/README.md
-%{_datadir}/selinux/*
-
 %files common
 %doc README-%{name}-common
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/daemon.json
 %{_bindir}/%{name}
+%{_bindir}/%{name}d
 %{_bindir}/%{name}-containerd
 %{_bindir}/%{name}-containerd-shim
 %dir %{_libexecdir}/%{repo}
-%{_sysconfdir}/cron.hourly/%{name}-cleanup
 
 %files client
 %license LICENSE*
@@ -696,12 +624,12 @@ fi
 %{_libexecdir}/%{repo}/%{repo}-novolume-plugin
 %{_unitdir}/%{repo}-novolume-plugin.*
 
-#%files rhel-push-plugin
-#%license rhel-push-plugin-%{commit5}/LICENSE
-#%doc rhel-push-plugin-%{commit5}/README.md
-#%{_mandir}/man8/rhel-push-plugin.8.gz
-#%{_libexecdir}/%{repo}/rhel-push-plugin
-#%{_unitdir}/rhel-push-plugin.*
+%files rhel-push-plugin
+%license rhel-push-plugin-%{commit5}/LICENSE
+%doc rhel-push-plugin-%{commit5}/README.md
+%{_mandir}/man8/rhel-push-plugin.8.gz
+%{_libexecdir}/%{repo}/rhel-push-plugin
+%{_unitdir}/rhel-push-plugin.*
 
 %files lvm-plugin
 %license %{repo}-lvm-plugin-%{commit6}/LICENSE
@@ -717,8 +645,73 @@ fi
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
-* Mon Jan 23 2017 Johnny Hughes <johnny@centos.org> - 2:1.12.5-14
-- Manual CentOS Debranding
+* Thu Feb 23 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-11
+- Resolves: #1426290
+- built docker @projectatomic/docker-1.12.6 commit 96d83a5
+
+* Tue Feb 21 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-10
+- Resolves: #1360892
+- From: Luwen Su <lsu@redhat.com>
+
+* Tue Feb 21 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-9
+- Resolves: #1420147
+- built docker @projectatomic/docker-1.12.6 commit 7f3e2af
+- require container-selinux >= 2:2.9-4
+
+* Mon Feb 20 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-8
+- bump to -8 for consistent nvr with docker-latest
+
+* Mon Feb 20 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-7
+- require container-selinux >= 2:2.9-3
+
+* Thu Feb 16 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-6
+- Resolves: #1415850
+
+* Wed Feb 15 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-5
+- Resolves: #1421714
+- built docker @projectatomic/docker-1.12.6 commit ddff1c3
+- built v1.10-migrator commit c417a6a
+- built docker-novolume-plugin commit 385ec70
+- built rhel-push-plugin commit 70653ed
+- built docker-lvm-plugin commit 8647404
+- built docker-runc @projectatomic/docker-1.12.6 commit 81b2542
+- built docker-containerd @projectatomic/docker-1.12.4 commit 471f03c
+
+* Tue Feb 14 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-4
+- Resolves: #1360892 - handle plugin restart
+- From: Dan Walsh <dwalsh@redhat.com>
+
+* Mon Feb 13 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-3
+- Resolves: #1420591
+- requires: container-selinux >= 2:2.9-1
+
+* Tue Feb 07 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-2
+- built docker @projectatomic/docker-1.12.6 commit dfc4aea
+- built v1.10-migrator commit c417a6a
+- built docker-novolume-plugin commit 385ec70
+- built rhel-push-plugin commit 70653ed
+- built docker-lvm-plugin commit 8647404
+- built docker-runc commit 81b2542
+- built docker-containerd commit 471f03c
+
+* Wed Jan 18 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-1
+- Resolves: #1413535 - container-selinux should obsolete docker-selinux
+- Resolves: #1411980 - honor the --default-runtime flag
+- Resolves: #1414250 - /usr/bin/dockerd execs dockerd-[current|latest]
+- Resolves: #1414436 - enable --restart=on-failure
+- Resolves: #1381929 - update manpages for '--format' example
+- built docker @projectatomic/docker-1.12.6 commit 037a2f5
+- built container-selinux commit 1169298
+- built d-s-s commit f7a3746
+- built v1.10-migrator commit c417a6a
+- built docker-novolume-plugin commit 385ec70
+- built rhel-push-plugin commit eb9e6be
+- built docker-lvm-plugin commit 8647404
+- built docker-runc commit 81b2542
+- built docker-containerd commit 471f03c
+
+* Thu Jan 12 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.5-15
+- use oci-systemd-hook >= 1:0.1.4-9
 
 * Wed Jan 11 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.5-14
 - reference correct container-selinux commit id (58209b8)
