@@ -1,5 +1,7 @@
 [Unit]
 Description=Run docker-cleanup every hour
+BindsTo=docker.service
+After=docker.service
 
 [Timer]
 OnCalendar=hourly
