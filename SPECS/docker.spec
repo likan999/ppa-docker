@@ -174,7 +174,7 @@ Requires: oci-systemd-hook >= 1:0.1.4-9
 #Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
 #Requires: subscription-manager-plugin-container
 Requires: xz
-Requires: atomic-registries
+#Requires: atomic-registries
 Requires: container-selinux >= 2:2.21-2
 Requires: container-storage-setup >= 0.3.0-1
 # rhbz#1214070 - update deps for d-s-s
@@ -475,11 +475,11 @@ rm -rf %{buildroot}%{_sharedstatedir}/%{name}-unit-test/contrib/init/openrc/%{na
 #ln -s %{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
 #ln -s %{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/rhel7.repo
 
-mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
-mkdir -p %{buildroot}/etc/%{name}/certs.d/registry.access.redhat.com
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
-ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/registry.access.redhat.com/redhat-ca.crt
+#mkdir -p %{buildroot}/etc/%{name}/certs.d/redhat.{com,io}
+#mkdir -p %{buildroot}/etc/%{name}/certs.d/registry.access.redhat.com
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.com/redhat-ca.crt
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/redhat.io/redhat-ca.crt
+#ln -s %{_sysconfdir}/rhsm/ca/redhat-uep.pem %{buildroot}/%{_sysconfdir}/%{name}/certs.d/registry.access.redhat.com/redhat-ca.crt
 
 # install container-storage-setup
 pushd container-storage-setup-%{commit_dss}
