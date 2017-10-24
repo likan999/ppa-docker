@@ -584,7 +584,7 @@ exit 0
 %{_mandir}/man8/%{name}d.8.gz
 #%dir %{_datadir}/rhel
 #%{_datadir}/rhel/*
-#%{_unitdir}/%{name}.service
+%{_unitdir}/%{name}.service
 %{_unitdir}/%{name}-storage-setup.service
 %{_datadir}/bash-completion/completions/%{name}
 %dir %attr(711, root, root) %{_sharedstatedir}/%{name}
