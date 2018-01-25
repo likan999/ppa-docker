@@ -24,7 +24,7 @@
 
 # docker
 %global git_docker https://github.com/projectatomic/docker
-%global commit_docker ec8512ba42f349cbe5a63140c4d9c810f7afa527
+%global commit_docker 3e8e77dcb88db0530c839b249bea7d75f9cd01d7
 %global shortcommit_docker %(c=%{commit_docker}; echo ${c:0:7})
 # docker_branch used in %%check
 %global docker_branch %{name}-%{version}
@@ -68,7 +68,7 @@
 Name: %{repo}
 Epoch: 2
 Version: 1.12.6
-Release: 68.git%{shortcommit_docker}%{?dist}
+Release: 71.git%{shortcommit_docker}%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -163,7 +163,7 @@ running and skip checksum calculation on startup.
 Summary: Common files for docker and docker-latest
 Requires: device-mapper-libs >= 7:1.02.97
 Requires: oci-umount >= 2:2.0.0-1
-Requires: oci-register-machine >= 1:0-3.10
+Requires: oci-register-machine >= 1:0-3.14
 Requires: oci-systemd-hook >= 1:0.1.4-9
 Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
 Requires: subscription-manager-plugin-container
@@ -650,6 +650,16 @@ exit 0
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
+* Wed Dec 13 2017 Frantisek Kluknavsky <fkluknav@redhat.com> - 2:1.12.6-71.git3e8e77d
+- rebased to 3e8e77dcb88db0530c839b249bea7d75f9cd01d7
+- https://bugzilla.redhat.com/show_bug.cgi?id=1518519
+
+* Tue Dec 12 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-70.gitec8512b
+- Resolves: #1524634 - start daemon after registries.service
+
+* Wed Nov 22 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-69.gitec8512b
+- use oci-register-machine >= 1:0-3.14
+
 * Thu Nov 16 2017 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.12.6-68.gitec8512b
 - revert some docker.sysconfig deletions wrongly done in commit 3b003db
 
