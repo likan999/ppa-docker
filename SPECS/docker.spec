@@ -68,7 +68,7 @@
 Name: %{repo}
 Epoch: 2
 Version: 1.12.6
-Release: 71.git%{shortcommit_docker}%{?dist}
+Release: 71.git%{shortcommit_docker}%{?dist}.1
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -166,7 +166,7 @@ Requires: oci-umount >= 2:2.0.0-1
 Requires: oci-register-machine >= 1:0-3.14
 Requires: oci-systemd-hook >= 1:0.1.4-9
 #Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
-Requires: subscription-manager-plugin-container
+#Requires: subscription-manager-plugin-container
 Requires: xz
 #Requires: atomic-registries
 Requires: container-selinux >= 2:2.21-2
