@@ -24,14 +24,14 @@
 
 # docker
 %global git_docker https://github.com/projectatomic/docker
-%global commit_docker 3e8e77dcb88db0530c839b249bea7d75f9cd01d7
+%global commit_docker 774336db27bb8931c1705e47781b3842d290c968
 %global shortcommit_docker %(c=%{commit_docker}; echo ${c:0:7})
 # docker_branch used in %%check
 %global docker_branch %{name}-%{version}
 
 # d-s-s
 %global git_dss https://github.com/projectatomic/container-storage-setup
-%global commit_dss 8276a1e9abf9607e82018c96001858d04420208e
+%global commit_dss e0997c32103235a3eff8fe6917e6f2d0507c119e
 %global shortcommit_dss %(c=%{commit_dss}; echo ${c:0:7})
 %global dss_libdir %{_exec_prefix}/lib/%{name}-storage-setup
 
@@ -46,9 +46,9 @@
 %global shortcommit_novolume %(c=%{commit_novolume}; echo ${c:0:7})
 
 # rhel-push-plugin
-#%global git_rhel_push https://github.com/projectatomic/rhel-push-plugin
-#%global commit_rhel_push af9107b2aedb235338e32a3c19507cad3f218b0d
-#%global shortcommit_rhel_push %(c=%{commit_rhel_push}; echo ${c:0:7})
+%global git_rhel_push https://github.com/projectatomic/rhel-push-plugin
+%global commit_rhel_push af9107b2aedb235338e32a3c19507cad3f218b0d
+%global shortcommit_rhel_push %(c=%{commit_rhel_push}; echo ${c:0:7})
 
 # docker-lvm-plugin
 %global git_lvm https://github.com/projectatomic/%{repo}-lvm-plugin
@@ -57,25 +57,35 @@
 
 # docker-runc
 %global git_runc https://github.com/projectatomic/runc
-%global commit_runc c5d311627d39439c5b1cc35c67a51c9c6ccda648
+%global commit_runc e9c345b3f906d5dc5e8100b05ce37073a811c74a
 %global shortcommit_runc %(c=%{commit_runc}; echo ${c:0:7})
 
 # docker-containerd
 %global git_containerd https://github.com/projectatomic/containerd
-%global commit_containerd fa8fb3d455e1baf716f3131581f0ed8b07c573a6
+%global commit_containerd 296f1f80d6c6a83cc625163f863e53d3287328ee
 %global shortcommit_containerd %(c=%{commit_containerd}; echo ${c:0:7})
+
+# docker-init
+%global git_tini https://github.com/krallin/tini
+%global commit_tini 5b117de7f824f3d3825737cf09581645abbe35d4
+%global shortcommit_tini %(c=%{commit_tini}; echo ${c:0:7})
+
+# docker-proxy
+%global git_libnetwork https://github.com/docker/libnetwork
+%global commit_libnetwork 14db3c494c259b8caa159a244a8e9708e3f4b595
+%global shortcommit_libnetwork %(c=%{commit_libnetwork}; echo ${c:0:7})
 
 Name: %{repo}
 Epoch: 2
-Version: 1.12.6
-Release: 71.git%{shortcommit_docker}%{?dist}.1
+Version: 1.13.1
+Release: 53.git%{shortcommit_docker}%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
 Source0: %{git_docker}/archive/%{commit_docker}.tar.gz
 Source2: %{git_dss}/archive/%{commit_dss}/container-storage-setup-%{shortcommit_dss}.tar.gz
 Source4: %{git_novolume}/archive/%{commit_novolume}/%{repo}-novolume-plugin-%{shortcommit_novolume}.tar.gz
-#Source5: %{git_rhel_push}/archive/%{commit_rhel_push}/rhel-push-plugin-%{shortcommit_rhel_push}.tar.gz
+Source5: %{git_rhel_push}/archive/%{commit_rhel_push}/rhel-push-plugin-%{shortcommit_rhel_push}.tar.gz
 Source6: %{git_lvm}/archive/%{commit_lvm}/%{repo}-lvm-plugin-%{shortcommit_lvm}.tar.gz
 Source8: %{name}.service
 Source9: %{name}.sysconfig
@@ -96,6 +106,10 @@ Source25: %{name}-cleanup.service
 Source26: %{name}-cleanup.timer
 Source27: daemon.json
 Source29: 99-docker.conf
+Source30: %{git_tini}/archive/%{commit_tini}/tini-%{shortcommit_tini}.tar.gz
+Source31: %{git_libnetwork}/archive/%{commit_libnetwork}/libnetwork-%{shortcommit_libnetwork}.tar.gz
+Source32: seccomp.json
+BuildRequires: cmake
 BuildRequires: sed
 BuildRequires: git
 BuildRequires: glibc-static
@@ -163,12 +177,12 @@ running and skip checksum calculation on startup.
 Summary: Common files for docker and docker-latest
 Requires: device-mapper-libs >= 7:1.02.97
 Requires: oci-umount >= 2:2.0.0-1
-Requires: oci-register-machine >= 1:0-3.14
+Requires: oci-register-machine >= 1:0-5.13
 Requires: oci-systemd-hook >= 1:0.1.4-9
-#Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
-#Requires: subscription-manager-plugin-container
+Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
+Requires: subscription-manager-plugin-container
 Requires: xz
-#Requires: atomic-registries
+Requires: atomic-registries
 Requires: container-selinux >= 2:2.21-2
 Requires: container-storage-setup >= 0.7.0-1
 # rhbz#1214070 - update deps for d-s-s
@@ -176,7 +190,7 @@ Requires: lvm2 >= 2.02.112
 Requires: xfsprogs
 # rhbz#1282898 - obsolete docker-storage-setup
 Obsoletes: %{name}-storage-setup <= 0.0.4-2
-Requires: skopeo-containers >= 0.1.24-3
+Requires: skopeo-containers >= 1:0.1.26-2
 Requires: gnupg
 Requires: tar
 
@@ -218,16 +232,16 @@ local volumes defined. In particular, the plugin will block `docker run` with:
 
 The only thing allowed will be just bind mounts.
 
-#%package rhel-push-plugin
-#License: GPLv2
-#Summary: Avoids pushing a RHEL-based image to docker.io registry
+%package rhel-push-plugin
+License: GPLv2
+Summary: Avoids pushing a RHEL-based image to docker.io registry
 
-#%description rhel-push-plugin
-#In order to use this plugin you must be running at least Docker 1.10 which
-#has support for authorization plugins.
+%description rhel-push-plugin
+In order to use this plugin you must be running at least Docker 1.10 which
+has support for authorization plugins.
 
-#This plugin avoids any RHEL based image to be pushed to the default docker.io
-#registry preventing users to violate the RH subscription agreement.
+This plugin avoids any RHEL based image to be pushed to the default docker.io
+registry preventing users to violate the RH subscription agreement.
 
 %package lvm-plugin
 License: LGPLv3
@@ -250,7 +264,7 @@ tar zxf %{SOURCE2}
 tar zxf %{SOURCE4}
 
 # untar rhel-push-plugin
-#tar zxf %{SOURCE5}
+tar zxf %{SOURCE5}
 
 # untar lvm-plugin
 tar zxf %{SOURCE6}
@@ -286,18 +300,32 @@ tar zxf %{SOURCE19}
 # untar docker-containerd
 tar zxf %{SOURCE20}
 
+# untar docker-init
+tar zxf %{SOURCE30}
+
+# untar libnetwork
+tar zxf %{SOURCE31}
+
 %build
+# compile docker-proxy first - otherwise deps in gopath conflict with the others below and this fails. Remove libnetwork libs then.
+pushd libnetwork-%{commit_libnetwork}
+mkdir -p src/github.com/%{repo}/libnetwork
+ln -s $(pwd)/* src/github.com/%{repo}/libnetwork
+export GOPATH=$(pwd)
+go build -ldflags="-linkmode=external" -o %{repo}-proxy github.com/%{repo}/libnetwork/cmd/proxy
+popd
+
 mkdir _build
 
 %global version_tag %{name}-%{version}-%{release}.%{_arch}
-%{__sed} -r -i 's/^([\t ]*PkgVersion:[\t ]*)"<unknown>",$/\1"%{version_tag}",/' daemon/info.go
-%{__sed} -r -i 's/^([\t ]*PkgVersion:[\t ]*)"<unknown>",$/\1"%{version_tag}",/' api/client/system/version.go
+#%%{__sed} -r -i 's/^([\t ]*PkgVersion:[\t ]*)"<unknown>",$/\1"%{version_tag}",/' daemon/info.go
+#%%{__sed} -r -i 's/^([\t ]*PkgVersion:[\t ]*)"<unknown>",$/\1"%{version_tag}",/' api/client/system/version.go
 
 pushd _build
   mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic}
   ln -s $(dirs +1 -l) src/%{import_path}
   ln -s $(dirs +1 -l)/%{repo}-novolume-plugin-%{commit_novolume} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
-#  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit_rhel_push} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit_rhel_push} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
   ln -s $(dirs +1 -l)/%{repo}-lvm-plugin-%{commit_lvm} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
@@ -306,10 +334,10 @@ pushd $(pwd)/_build/src
 %gobuild %{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
 popd
 
-#export GOPATH=$(pwd)/rhel-push-plugin-%{commit_rhel_push}/Godeps/_workspace:$(pwd)/_build
-#pushd $(pwd)/_build/src
-#%gobuild %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
-#popd
+export GOPATH=$(pwd)/rhel-push-plugin-%{commit_rhel_push}/Godeps/_workspace:$(pwd)/_build
+pushd $(pwd)/_build/src
+%gobuild %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+popd
 
 export GOPATH=$(pwd)/%{repo}-lvm-plugin-%{commit_lvm}/vendor:$(pwd)/_build
 pushd $(pwd)/_build/src
@@ -323,7 +351,7 @@ export GOPATH=$(pwd)/_build:$(pwd)/vendor:%{gopath}
 # build %%{name} manpages
 man/md2man-all.sh
 go-md2man -in %{repo}-novolume-plugin-%{commit_novolume}/man/%{repo}-novolume-plugin.8.md -out %{repo}-novolume-plugin.8
-#go-md2man -in rhel-push-plugin-%{commit_rhel_push}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
+go-md2man -in rhel-push-plugin-%{commit_rhel_push}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
 go-md2man -in %{repo}-lvm-plugin-%{commit_lvm}/man/%{repo}-lvm-plugin.8.md -out %{repo}-lvm-plugin.8
 
 # build %%{name} binary
@@ -351,6 +379,12 @@ pushd containerd-%{commit_containerd}
 make
 popd
 
+# build docker-init
+pushd tini-%{commit_tini}
+cmake -DMINIMAL=ON .
+make tini-static
+popd
+
 %install
 # install binary
 install -d %{buildroot}%{_bindir}
@@ -370,10 +404,17 @@ for x in bundles/latest; do
     continue
     fi
     rm $x/dynbinary-daemon/*.{md5,sha256}
-    install -p -m 755 $x/dynbinary-daemon/%{repo}-proxy-* %{buildroot}%{_libexecdir}/%{repo}/%{repo}-proxy-current
     install -p -m 755 $x/dynbinary-daemon/%{repo}d-* %{buildroot}%{_bindir}/%{repo}d-current
     break
 done
+
+# install daemon.json and seccomp.json
+install -dp %{buildroot}%{_sysconfdir}/%{name}
+install -p -m 644 %{SOURCE32} %{buildroot}%{_sysconfdir}/%{name}
+
+#install docker-proxy
+install -d %{buildroot}%{_libexecdir}/%{repo}
+install -p -m 755 libnetwork-%{commit_libnetwork}/%{repo}-proxy %{buildroot}%{_libexecdir}/%{repo}/%{repo}-proxy-current
 
 install -dp %{buildroot}%{_sysconfdir}/%{name}
 install -p -m 644 %{SOURCE27} %{buildroot}%{_sysconfdir}/%{name}
@@ -466,12 +507,12 @@ install -d %{buildroot}%{_mandir}/man8
 install -p -m 644 %{repo}-novolume-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install rhel-push-plugin executable, unitfile, socket and man
-#install -d %{buildroot}%{_libexecdir}/%{repo}
-#install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
-#install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
-#install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
-#install -d %{buildroot}%{_mandir}/man8
-#install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
+install -d %{buildroot}%{_libexecdir}/%{repo}
+install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
+install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
+install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
+install -d %{buildroot}%{_mandir}/man8
+install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install %%{repo}-lvm-plugin executable, unitfile, socket and man
 install -d %{buildroot}/%{_libexecdir}/%{repo}
@@ -501,6 +542,10 @@ install -p -m 755 containerd-%{commit_containerd}/bin/ctr %{buildroot}%{_bindir}
 #install sysctl knob
 install -d -p %{buildroot}%{_usr}/lib/sysctl.d
 install -p -m 644 %{SOURCE29} %{buildroot}%{_usr}/lib/sysctl.d
+
+#install tini
+install -d %{buildroot}%{_libexecdir}/%{repo}
+install -p -m 755 tini-%{commit_tini}/tini-static %{buildroot}%{_libexecdir}/%{repo}/%{repo}-init-current
 
 %check
 [ ! -w /run/%{name}.sock ] || {
@@ -547,14 +592,32 @@ exit 0
 %postun novolume-plugin
 %systemd_postun_with_restart %{name}-novolume-plugin.service
 
-#%post rhel-push-plugin
-#%systemd_post rhel-push-plugin.service
+%post rhel-push-plugin
+%systemd_post rhel-push-plugin.service
 
-#%preun rhel-push-plugin
-#%systemd_preun rhel-push-plugin.service
+%preun rhel-push-plugin
+%systemd_preun rhel-push-plugin.service
 
-#%postun rhel-push-plugin
-#%systemd_postun_with_restart rhel-push-plugin.service
+%postun rhel-push-plugin
+%systemd_postun_with_restart rhel-push-plugin.service
+
+%posttrans
+# Install a default docker-storage-setup based on kernel version.
+if [ ! -e %{_sysconfdir}/sysconfig/%{name}-storage-setup ]; then
+    # Import /etc/os-release
+    . %{_sysconfdir}/os-release || :
+
+    case "$VERSION_ID" in
+        7.0 | 7.1 | 7.2 | 7.3 | 7.4)
+           echo "STORAGE_DRIVER=devicemapper" >> %{_sysconfdir}/sysconfig/%{name}-storage-setup || :
+           echo "CONTAINER_THINPOOL=docker-pool" >> %{_sysconfdir}/sysconfig/%{name}-storage-setup || :
+        ;;
+    *)
+        # 7.5 onwards, switch to overlay2 by default.
+        echo "STORAGE_DRIVER=overlay2" >> %{_sysconfdir}/sysconfig/%{name}-storage-setup || :
+    ;;
+    esac
+fi
 
 #define license tag if not already defined
 %{!?_licensedir:%global license %doc}
@@ -564,8 +627,11 @@ exit 0
 %doc AUTHORS CHANGELOG.md CONTRIBUTING.md MAINTAINERS NOTICE README*.md
 %config(noreplace) %attr(644, root, root) %{_sysconfdir}/sysconfig/%{name}-storage
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}-network
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-storage-setup
+# Use ghost to not package default file installed by "make install-docker".
+# Instead we will install a default based on kernel version in %posttrans.
+%ghost %{_sysconfdir}/sysconfig/%{name}-storage-setup
 %config(noreplace) %{_sysconfdir}/%{name}/daemon.json
+%config(noreplace) %{_sysconfdir}/%{name}/seccomp.json
 %dir %{_sysconfdir}/%{name}
 %{_bindir}/%{name}d-current
 %{_bindir}/%{name}-storage-setup
@@ -591,10 +657,10 @@ exit 0
 %{_datadir}/vim/vimfiles/syntax/%{name}file.vim
 %dir %{_datadir}/zsh/site-functions
 %{_datadir}/zsh/site-functions/_%{name}
-# 1.12 specific
 %dir %{_libexecdir}/%{repo}
 %{_libexecdir}/%{repo}/%{repo}-runc-current
 %{_libexecdir}/%{repo}/%{repo}-proxy-current
+%{_libexecdir}/%{repo}/%{repo}-init-current
 %{_unitdir}/%{name}-cleanup.service
 %{_unitdir}/%{name}-cleanup.timer
 #%%{_unitdir}/%%{repo}-containerd.service
@@ -629,12 +695,12 @@ exit 0
 %{_libexecdir}/%{repo}/%{repo}-novolume-plugin
 %{_unitdir}/%{repo}-novolume-plugin.*
 
-#%files rhel-push-plugin
-#%license rhel-push-plugin-%{commit_rhel_push}/LICENSE
-#%doc rhel-push-plugin-%{commit_rhel_push}/README.md
-#%{_mandir}/man8/rhel-push-plugin.8.gz
-#%{_libexecdir}/%{repo}/rhel-push-plugin
-#%{_unitdir}/rhel-push-plugin.*
+%files rhel-push-plugin
+%license rhel-push-plugin-%{commit_rhel_push}/LICENSE
+%doc rhel-push-plugin-%{commit_rhel_push}/README.md
+%{_mandir}/man8/rhel-push-plugin.8.gz
+%{_libexecdir}/%{repo}/rhel-push-plugin
+%{_unitdir}/rhel-push-plugin.*
 
 %files lvm-plugin
 %license %{repo}-lvm-plugin-%{commit_lvm}/LICENSE
@@ -650,8 +716,70 @@ exit 0
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
-* Mon Jan 29 2018 Johnny Hughes <johnny@centos.org> - 2:1.12.6-71.git3e8e77d
-- Manual CentOS Debranding
+* Tue Feb 20 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-53.git774336d
+- Resolves: #1540540
+- built docker @projectatomic/docker-1.13.1-rhel commit 774336d
+- built docker-novolume-plugin commit 385ec70
+- built rhel-push-plugin commit af9107b
+- built docker-lvm-plugin commit 8647404
+- built docker-runc @projectatomic/docker-1.13.1-rhel commit e9c345b
+- built docker-containerd @projectatomic/docker-1.13.1-rhel commit 296f1f8
+- built docker-init commit 5b117de
+- built libnetwork commit 14db3c4
+
+* Mon Feb 12 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-52.gitce62987
+- Resolves: #1534827, #1543575
+- built docker @projectatomic/docker-1.13.1-rhel commit ce62987
+- built docker-novolume-plugin commit 385ec70
+- built rhel-push-plugin commit af9107b
+- built docker-lvm-plugin commit 8647404
+- built docker-runc @projectatomic/docker-1.13.1-rhel commit e9c345b
+- built docker-containerd @projectatomic/docker-1.13.1-rhel commit 296f1f8
+- built docker-init commit 0effd37
+- built libnetwork commit 1ba8194
+
+* Mon Feb 05 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-48.gitec9911e
+- Resolves: #1536726 - bump skopeo-containers dependency
+
+* Mon Feb 05 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-47.gitec9911e
+- oci-register-machine >= 1:0-5.13 (RE: #1542112)
+
+* Mon Feb 05 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-46.gitec9911e
+- Resolves: #1542112 - depend on oci-register-machine (disabled in config file)
+- revert removal of oci-register-machine done in 2:1.13.1-1
+
+* Thu Feb 01 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-45.gitec9911e
+- c-s-s >= 0.7.0-1
+
+* Thu Feb 01 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-44.gitec9911e
+- built docker @projectatomic/docker-1.13.1-rhel commit ec9911e
+- built docker-novolume-plugin commit 385ec70
+- built rhel-push-plugin commit af9107b
+- built docker-lvm-plugin commit 8647404
+- built docker-runc @projectatomic/docker-1.13.1-rhel commit 518736e
+- built docker-containerd @projectatomic/docker-1.13.1-rhel commit 296f1f8
+- built docker-init commit 0effd37
+- built libnetwork commit 20dd462
+
+* Tue Jan 30 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-43.gitec9911e
+- built docker @projectatomic/docker-1.13.1-rhel commit ec9911e
+- built docker-novolume-plugin commit 385ec70
+- built rhel-push-plugin commit af9107b
+- built docker-lvm-plugin commit 8647404
+- built docker-runc @projectatomic/docker-1.13.1-rhel commit 518736e
+- built docker-containerd @projectatomic/docker-1.13.1-rhel commit 296f1f8
+- built docker-init commit 0effd37
+- built libnetwork commit 20dd462
+
+* Wed Jan 24 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-1.gitddee18e
+- built docker @projectatomic/docker-1.13.1-rhel commit ddee18e
+- built docker-novolume-plugin commit 385ec70
+- built rhel-push-plugin commit af9107b
+- built docker-lvm-plugin commit 8647404
+- built docker-runc @projectatomic/docker-1.13.1-rhel commit 518736e
+- built docker-containerd @projectatomic/docker-1.13.1-rhel commit 296f1f8
+- built docker-init commit 0effd37
+- built libnetwork commit 5ab4ab8
 
 * Wed Dec 13 2017 Frantisek Kluknavsky <fkluknav@redhat.com> - 2:1.12.6-71.git3e8e77d
 - rebased to 3e8e77dcb88db0530c839b249bea7d75f9cd01d7
