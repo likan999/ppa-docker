@@ -179,7 +179,7 @@ Requires: device-mapper-libs >= 7:1.02.97
 Requires: oci-umount >= 2:2.3.3-3
 Requires: oci-register-machine >= 1:0-5.13
 Requires: oci-systemd-hook >= 1:0.1.4-9
-Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
+#Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
 Requires: xz
 #Requires: atomic-registries
 Requires: container-selinux >= 2:2.51-1
