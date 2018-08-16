@@ -7,8 +7,7 @@ if [ -z "${DOCKER_CERT_PATH}" ]; then
 fi
 
 # Do not add registries in this file anymore. Use /etc/containers/registries.conf
-# from the atomic-registries package.
-#
+# instead. For more information reference the registries.conf(5) man page.
 
 # Location used for temporary files, such as those created by
 # docker load and build operations. Default is /var/lib/docker/tmp
