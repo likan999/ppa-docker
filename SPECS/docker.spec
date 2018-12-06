@@ -20,7 +20,8 @@
 %global import_path %{provider}.%{provider_tld}/%{project}/%{repo}
 
 %if ! 0%{?gobuild:1}
-%define gobuild(o:) go build -ldflags "${LDFLAGS:-} -B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \\n')" -a -v -x %{?**};
+%define gobuild(o:) \
+scl enable go-toolset-1.10 -- go build -buildmode pie -compiler gc -tags="rpm_crashtraceback no_openssl ${BUILDTAGS:-}" -ldflags "${LDFLAGS:-} -B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \\n') -extldflags '%__global_ldflags'" -a -v -x %{?**};
 %endif
 
 # docker
@@ -58,7 +59,7 @@
 
 # docker-runc
 %global git_runc https://github.com/projectatomic/runc
-%global commit_runc 5eda6f6fd0c2884c2c8e78a6e7119e8d0ecedb77
+%global commit_runc 290a33602b16ff2d1cc5339bc0297f0e094462ce
 %global shortcommit_runc %(c=%{commit_runc}; echo ${c:0:7})
 
 # docker-containerd
@@ -79,7 +80,7 @@
 Name: %{repo}
 Epoch: 2
 Version: 1.13.1
-Release: 84.git%{shortcommit_docker}%{?dist}
+Release: 88.git%{shortcommit_docker}%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -115,9 +116,14 @@ BuildRequires: cmake
 BuildRequires: sed
 BuildRequires: git
 BuildRequires: glibc-static
-BuildRequires: go-toolset-7-golang-bin
+%if 0%{?fedora} || 0%{?centos}
+BuildRequires: %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
+%else
 BuildRequires: go-toolset-7-runtime
+BuildRequires: go-toolset-7-golang-bin
+BuildRequires: go-toolset-1.10
 BuildRequires: openssl-devel
+%endif #fedora
 BuildRequires: gpgme-devel
 BuildRequires: device-mapper-devel
 BuildRequires: pkgconfig(audit)
@@ -317,7 +323,8 @@ pushd libnetwork-%{commit_libnetwork}
 mkdir -p src/github.com/%{repo}/libnetwork
 ln -s $(pwd)/* src/github.com/%{repo}/libnetwork
 export GOPATH=$(pwd)
-go build -ldflags="-linkmode=external" -o %{repo}-proxy github.com/%{repo}/libnetwork/cmd/proxy
+LDFLAGS="-linkmode=external" %gobuild -o %{repo}-proxy github.com/%{repo}/libnetwork/cmd/proxy
+export LDFLAGS=''
 popd
 
 mkdir _build
@@ -349,6 +356,15 @@ pushd $(pwd)/_build/src
 %gobuild %{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
+pushd containerd-%{commit_containerd}
+mkdir -p vendor/src/%(dirname github.com/docker/containerd)
+ln -s ../../../.. vendor/src/github.com/docker/containerd
+export GOPATH=$(pwd)/vendor
+%gobuild -o bin/containerd github.com/docker/containerd/containerd
+%gobuild -o bin/containerd-shim github.com/docker/containerd/containerd-shim
+%gobuild -o bin/ctr github.com/docker/containerd/ctr
+popd
+
 export DOCKER_GITCOMMIT="%{shortcommit_docker}/%{version}"
 export DOCKER_BUILDTAGS='selinux seccomp'
 export GOPATH=$(pwd)/_build:$(pwd)/vendor
@@ -373,21 +389,26 @@ popd
 
 # build %%{repo}-runc
 pushd runc-%{commit_runc}
-#export GOPATH=$GOPATH:$(pwd)/vendor
-make BUILDTAGS="seccomp selinux" COMMIT=%{commit_runc}
+mkdir -p GOPATH
+pushd GOPATH
+mkdir -p src/%{provider}.%{provider_tld}/opencontainers
+ln -s $(dirs +1 -l) src/github.com/opencontainers/runc
 popd
+ 
+pushd GOPATH/src/github.com/opencontainers/runc
+export GOPATH=$(pwd)/GOPATH:$(pwd)/Godeps/_workspace
+export BUILDTAGS='selinux seccomp'
+%gobuild -o runc github.com/opencontainers/runc
 
-# build %%{name}-containerd
-pushd _build
-ln -s $(dirs +1 -l)/containerd-%{commit_containerd} src/%{provider}.%{provider_tld}/%{repo}/containerd
+pushd man
+./md2man-all.sh
 popd
-pushd containerd-%{commit_containerd}
-make
+popd
 popd
 
 # build docker-init
 pushd tini-%{commit_tini}
-cmake -DMINIMAL=ON .
+cmake .
 sed -i 's/#define TINI_GIT     ""/#define TINI_GIT     " - git.%{commit_tini}"/g' tiniConfig.h
 make tini-static
 popd
@@ -723,6 +744,19 @@ fi
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
+* Thu Dec 06 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-88.git07f3374
+- Resolves: #1655214 - build with the correct golang deps
+
+* Wed Nov 21 2018 Frantisek Kluknavsky <fkluknav@redhat.com> - 2:1.13.1-87.git07f3374
+- buildrequires for centos
+
+* Tue Nov 20 2018 Frantisek Kluknavsky <fkluknav@redhat.com> - 2:1.13.1-86.git07f3374
+- build tini without -DMINIMAL
+
+* Thu Nov 15 2018 Frantisek Kluknavsky <fkluknav@redhat.com> - 2:1.13.1-85.git07f3374
+- built docker-runc @projectatomic/docker-1.13.1-rhel commit 290a336
+- Resolves: #1557426
+
 * Tue Nov 06 2018 Frantisek Kluknavsky <fkluknav@redhat.com> - 2:1.13.1-84.git07f3374
 - built docker-containerd commit 923a387
 
