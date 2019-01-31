@@ -19,10 +19,7 @@
 
 %global import_path %{provider}.%{provider_tld}/%{project}/%{repo}
 
-%if ! 0%{?gobuild:1}
-%define gobuild(o:) \
-scl enable go-toolset-1.10 -- go build -buildmode pie -compiler gc -tags="rpm_crashtraceback no_openssl ${BUILDTAGS:-}" -ldflags "${LDFLAGS:-} -B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \\n') -extldflags '%__global_ldflags'" -a -v -x %{?**};
-%endif
+%define gobuild(o:) go build -buildmode pie -compiler gc -tags="rpm_crashtraceback ${BUILDTAGS:-}" -ldflags "${GO_LDFLAGS:-} ${LDFLAGS:-} -B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \\n') -extldflags '-Wl,-z,relro -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld'" -a -v -x %{?**};
 
 # docker
 %global git_docker https://github.com/projectatomic/docker
@@ -48,9 +45,9 @@ scl enable go-toolset-1.10 -- go build -buildmode pie -compiler gc -tags="rpm_cr
 %global shortcommit_novolume %(c=%{commit_novolume}; echo ${c:0:7})
 
 # rhel-push-plugin
-#%%global git_rhel_push https://github.com/projectatomic/rhel-push-plugin
-#%%global commit_rhel_push af9107b2aedb235338e32a3c19507cad3f218b0d
-#%%global shortcommit_rhel_push %(c=%{commit_rhel_push}; echo ${c:0:7})
+%global git_rhel_push https://github.com/projectatomic/rhel-push-plugin
+%global commit_rhel_push af9107b2aedb235338e32a3c19507cad3f218b0d
+%global shortcommit_rhel_push %(c=%{commit_rhel_push}; echo ${c:0:7})
 
 # docker-lvm-plugin
 %global git_lvm https://github.com/projectatomic/%{repo}-lvm-plugin
@@ -64,7 +61,7 @@ scl enable go-toolset-1.10 -- go build -buildmode pie -compiler gc -tags="rpm_cr
 
 # docker-containerd
 %global git_containerd https://github.com/projectatomic/containerd
-%global commit_containerd 923a38785ecb7156f00403cb1cbf5b448bd3befa
+%global commit_containerd b968034319d76c623176301198c1e34ea6541b33
 %global shortcommit_containerd %(c=%{commit_containerd}; echo ${c:0:7})
 
 # docker-init
@@ -80,15 +77,15 @@ scl enable go-toolset-1.10 -- go build -buildmode pie -compiler gc -tags="rpm_cr
 Name: %{repo}
 Epoch: 2
 Version: 1.13.1
-Release: 88.git%{shortcommit_docker}%{?dist}
+Release: 90.git%{shortcommit_docker}%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
-ExclusiveArch: aarch64 %{arm} ppc64le s390x x86_64 %{ix86}
+ExclusiveArch: aarch64 %{arm} ppc64le s390x x86_64
 Source0: %{git_docker}/archive/%{commit_docker}.tar.gz
 Source2: %{git_dss}/archive/%{commit_dss}/container-storage-setup-%{shortcommit_dss}.tar.gz
 Source4: %{git_novolume}/archive/%{commit_novolume}/%{repo}-novolume-plugin-%{shortcommit_novolume}.tar.gz
-#Source5: %{git_rhel_push}/archive/%{commit_rhel_push}/rhel-push-plugin-%{shortcommit_rhel_push}.tar.gz
+Source5: %{git_rhel_push}/archive/%{commit_rhel_push}/rhel-push-plugin-%{shortcommit_rhel_push}.tar.gz
 Source6: %{git_lvm}/archive/%{commit_lvm}/%{repo}-lvm-plugin-%{shortcommit_lvm}.tar.gz
 Source8: %{name}.service
 Source9: %{name}.sysconfig
@@ -119,8 +116,6 @@ BuildRequires: glibc-static
 %if 0%{?fedora} || 0%{?centos}
 BuildRequires: %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
 %else
-BuildRequires: go-toolset-7-runtime
-BuildRequires: go-toolset-7-golang-bin
 BuildRequires: go-toolset-1.10
 BuildRequires: openssl-devel
 %endif #fedora
@@ -192,7 +187,7 @@ Requires: device-mapper-libs >= 7:1.02.97
 Requires: oci-umount >= 2:2.3.3-3
 Requires: oci-register-machine >= 1:0-5.13
 Requires: oci-systemd-hook >= 1:0.1.4-9
-#Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
+Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
 Requires: xz
 Requires: atomic-registries
 Requires: container-selinux >= 2:2.51-1
@@ -244,16 +239,16 @@ local volumes defined. In particular, the plugin will block `docker run` with:
 
 The only thing allowed will be just bind mounts.
 
-#%%package rhel-push-plugin
-#License: GPLv2
-#Summary: Avoids pushing a RHEL-based image to docker.io registry
+%package rhel-push-plugin
+License: GPLv2
+Summary: Avoids pushing a RHEL-based image to docker.io registry
 
-#%%description rhel-push-plugin
-#In order to use this plugin you must be running at least Docker 1.10 which
-#has support for authorization plugins.
+%description rhel-push-plugin
+In order to use this plugin you must be running at least Docker 1.10 which
+has support for authorization plugins.
 
-#This plugin avoids any RHEL based image to be pushed to the default docker.io
-#registry preventing users to violate the RH subscription agreement.
+This plugin avoids any RHEL based image to be pushed to the default docker.io
+registry preventing users to violate the RH subscription agreement.
 
 %package lvm-plugin
 License: LGPLv3
@@ -266,7 +261,7 @@ Docker Volume Driver for lvm volumes.
 This plugin can be used to create lvm volumes of specified size, which can
 then be bind mounted into the container using `docker run` command.
 
-%enable_gotoolset7
+%{?enable_gotoolset110}
 
 %prep
 %setup -q -n %{name}-%{commit_docker}
@@ -278,7 +273,7 @@ tar zxf %{SOURCE2}
 tar zxf %{SOURCE4}
 
 # untar rhel-push-plugin
-#tar zxf %{SOURCE5}
+tar zxf %{SOURCE5}
 
 # untar lvm-plugin
 tar zxf %{SOURCE6}
@@ -323,8 +318,8 @@ pushd libnetwork-%{commit_libnetwork}
 mkdir -p src/github.com/%{repo}/libnetwork
 ln -s $(pwd)/* src/github.com/%{repo}/libnetwork
 export GOPATH=$(pwd)
-LDFLAGS="-linkmode=external" %gobuild -o %{repo}-proxy github.com/%{repo}/libnetwork/cmd/proxy
-export LDFLAGS=''
+export GO_LDFLAGS="-linkmode=external"
+%gobuild -o %{repo}-proxy github.com/%{repo}/libnetwork/cmd/proxy
 popd
 
 mkdir _build
@@ -337,7 +332,7 @@ pushd _build
   mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic}
   ln -s $(dirs +1 -l) src/%{import_path}
   ln -s $(dirs +1 -l)/%{repo}-novolume-plugin-%{commit_novolume} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
-#  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit_rhel_push} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit_rhel_push} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
   ln -s $(dirs +1 -l)/%{repo}-lvm-plugin-%{commit_lvm} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
@@ -346,10 +341,10 @@ pushd $(pwd)/_build/src
 %gobuild %{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
 popd
 
-#export GOPATH=$(pwd)/rhel-push-plugin-%{commit_rhel_push}/Godeps/_workspace:$(pwd)/_build
-#pushd $(pwd)/_build/src
-#%%gobuild %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
-#popd
+export GOPATH=$(pwd)/rhel-push-plugin-%{commit_rhel_push}/Godeps/_workspace:$(pwd)/_build
+pushd $(pwd)/_build/src
+%gobuild %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+popd
 
 export GOPATH=$(pwd)/%{repo}-lvm-plugin-%{commit_lvm}/Godeps/_workspace:$(pwd)/_build
 pushd $(pwd)/_build/src
@@ -372,7 +367,7 @@ export GOPATH=$(pwd)/_build:$(pwd)/vendor
 # build %%{name} manpages
 man/md2man-all.sh
 go-md2man -in %{repo}-novolume-plugin-%{commit_novolume}/man/%{repo}-novolume-plugin.8.md -out %{repo}-novolume-plugin.8
-#go-md2man -in rhel-push-plugin-%{commit_rhel_push}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
+go-md2man -in rhel-push-plugin-%{commit_rhel_push}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
 go-md2man -in %{repo}-lvm-plugin-%{commit_lvm}/man/%{repo}-lvm-plugin.8.md -out %{repo}-lvm-plugin.8
 
 # build %%{name} binary
@@ -389,6 +384,7 @@ popd
 
 # build %%{repo}-runc
 pushd runc-%{commit_runc}
+export RUNC_VERSION=$(cat ./VERSION)
 mkdir -p GOPATH
 pushd GOPATH
 mkdir -p src/%{provider}.%{provider_tld}/opencontainers
@@ -398,6 +394,7 @@ popd
 pushd GOPATH/src/github.com/opencontainers/runc
 export GOPATH=$(pwd)/GOPATH:$(pwd)/Godeps/_workspace
 export BUILDTAGS='selinux seccomp'
+export GO_LDFLAGS="-X main.gitCommit=%{commit_runc} -X main.version=$RUNC_VERSION"
 %gobuild -o runc github.com/opencontainers/runc
 
 pushd man
@@ -535,12 +532,12 @@ install -d %{buildroot}%{_mandir}/man8
 install -p -m 644 %{repo}-novolume-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install rhel-push-plugin executable, unitfile, socket and man
-#install -d %{buildroot}%{_libexecdir}/%{repo}
-#install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
-#install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
-#install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
-#install -d %{buildroot}%{_mandir}/man8
-#install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
+install -d %{buildroot}%{_libexecdir}/%{repo}
+install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
+install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
+install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
+install -d %{buildroot}%{_mandir}/man8
+install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install %%{repo}-lvm-plugin executable, unitfile, socket and man
 install -d %{buildroot}/%{_libexecdir}/%{repo}
@@ -620,14 +617,14 @@ exit 0
 %postun novolume-plugin
 %systemd_postun_with_restart %{name}-novolume-plugin.service
 
-#%%post rhel-push-plugin
-#%%systemd_post rhel-push-plugin.service
+%post rhel-push-plugin
+%systemd_post rhel-push-plugin.service
 
-#%%preun rhel-push-plugin
-#%%systemd_preun rhel-push-plugin.service
+%preun rhel-push-plugin
+%systemd_preun rhel-push-plugin.service
 
-#%%postun rhel-push-plugin
-#%%systemd_postun_with_restart rhel-push-plugin.service
+%postun rhel-push-plugin
+%systemd_postun_with_restart rhel-push-plugin.service
 
 %posttrans
 # Install a default docker-storage-setup based on kernel version.
@@ -723,12 +720,12 @@ fi
 %{_libexecdir}/%{repo}/%{repo}-novolume-plugin
 %{_unitdir}/%{repo}-novolume-plugin.*
 
-#%%files rhel-push-plugin
-#%%license rhel-push-plugin-%{commit_rhel_push}/LICENSE
-#%%doc rhel-push-plugin-%{commit_rhel_push}/README.md
-#%%{_mandir}/man8/rhel-push-plugin.8.gz
-#%%{_libexecdir}/%{repo}/rhel-push-plugin
-#%%{_unitdir}/rhel-push-plugin.*
+%files rhel-push-plugin
+%license rhel-push-plugin-%{commit_rhel_push}/LICENSE
+%doc rhel-push-plugin-%{commit_rhel_push}/README.md
+%{_mandir}/man8/rhel-push-plugin.8.gz
+%{_libexecdir}/%{repo}/rhel-push-plugin
+%{_unitdir}/rhel-push-plugin.*
 
 %files lvm-plugin
 %license %{repo}-lvm-plugin-%{commit_lvm}/LICENSE
@@ -744,8 +741,13 @@ fi
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
-* Fri Dec 07 2018 Johnny Hughes <johnny@centos.org>
-- Manual CentOS Debranding
+* Wed Jan 16 2019 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-90.git07f3374
+- Resolves: #1662700
+- built docker-containerd @projectatomic/docker-1.13.1-rhel commit b968034
+
+* Tue Jan 08 2019 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-89.git07f3374
+- Resolves: #1661622 - fix docker-runc build
+- use an additional GO_LDFLAGS to keep flags separate from those for tini
 
 * Thu Dec 06 2018 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-88.git07f3374
 - Resolves: #1655214 - build with the correct golang deps
