@@ -77,7 +77,7 @@
 Name: %{repo}
 Epoch: 2
 Version: 1.13.1
-Release: 90.git%{shortcommit_docker}%{?dist}
+Release: 91.git%{shortcommit_docker}%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -109,6 +109,7 @@ Source29: 99-docker.conf
 Source30: %{git_tini}/archive/%{commit_tini}/tini-%{shortcommit_tini}.tar.gz
 Source31: %{git_libnetwork}/archive/%{commit_libnetwork}/libnetwork-%{shortcommit_libnetwork}.tar.gz
 Source32: seccomp.json
+Patch0: 0001-nsenter-clone-proc-self-exe-to-avoid-exposing-host-b.patch
 BuildRequires: cmake
 BuildRequires: sed
 BuildRequires: git
@@ -302,6 +303,9 @@ tar zxf %{SOURCE17}
 
 # untar docker-runc
 tar zxf %{SOURCE19}
+pushd runc-%{commit_runc}
+%patch0 -p1
+popd
 
 # untar docker-containerd
 tar zxf %{SOURCE20}
@@ -653,7 +657,7 @@ fi
 %config(noreplace) %attr(644, root, root) %{_sysconfdir}/sysconfig/%{name}-storage
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}-network
 # Use ghost to not package default file installed by "make install-docker".
-# Instead we will install a default based on kernel version in %posttrans.
+# Instead we will install a default based on kernel version in %%posttrans.
 %ghost %{_sysconfdir}/sysconfig/%{name}-storage-setup
 %config(noreplace) %{_sysconfdir}/%{name}/daemon.json
 %config(noreplace) %{_sysconfdir}/%{name}/seccomp.json
@@ -741,6 +745,9 @@ fi
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
+* Sat Feb 09 2019 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-91.git07f3374
+- Resolves: #1665326 - CVE-2019-5736
+ 
 * Wed Jan 16 2019 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-90.git07f3374
 - Resolves: #1662700
 - built docker-containerd @projectatomic/docker-1.13.1-rhel commit b968034
