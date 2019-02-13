@@ -114,7 +114,7 @@ BuildRequires: cmake
 BuildRequires: sed
 BuildRequires: git
 BuildRequires: glibc-static
-%if 0%{?fedora} || 0%{?centos}
+%if 0%{?fedora} 
 BuildRequires: %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
 %else
 BuildRequires: go-toolset-1.10
