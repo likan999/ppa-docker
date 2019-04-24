@@ -56,7 +56,7 @@
 
 # docker-runc
 %global git_runc https://github.com/projectatomic/runc
-%global commit_runc df5c38a9167e87f53a9894d77c0950e178a745e7
+%global commit_runc 9c3c5f853ebf0ffac0d087e94daef462133b69c7
 %global shortcommit_runc %(c=%{commit_runc}; echo ${c:0:7})
 
 # docker-containerd
@@ -77,7 +77,7 @@
 Name: %{repo}
 Epoch: 2
 Version: 1.13.1
-Release: 94.git%{shortcommit_docker}%{?dist}
+Release: 96.git%{shortcommit_docker}%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -741,6 +741,14 @@ fi
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
+* Tue Apr 02 2019 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-96.gitb2f74b2
+- Resolves: #1695305
+- built docker-runc @projectatomic/docker-1.13.1-rhel commit 9c3c5f8
+
+* Tue Apr 02 2019 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-95.gitb2f74b2
+- Resolves: #1587898
+- built docker-runc @projectatomic/docker-1.13.1-rhel commit 16883c4
+
 * Tue Feb 26 2019 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-94.gitb2f74b2
 - Resolves: #1556901, #1678096 
 - built docker-runc @projectatomic/docker-1.13.1-rhel commit df5c38a
