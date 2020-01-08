@@ -56,7 +56,7 @@
 
 # docker-runc
 %global git_runc https://github.com/projectatomic/runc
-%global commit_runc 9c3c5f853ebf0ffac0d087e94daef462133b69c7
+%global commit_runc e45dd70447fb72ee4e1f6989173aa6c5dd492d87
 %global shortcommit_runc %(c=%{commit_runc}; echo ${c:0:7})
 
 # docker-containerd
@@ -77,7 +77,7 @@
 Name: %{repo}
 Epoch: 2
 Version: 1.13.1
-Release: 104.git%{shortcommit_docker}%{?dist}
+Release: 108.git%{shortcommit_docker}%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
@@ -109,6 +109,13 @@ Source29: 99-docker.conf
 Source30: %{git_tini}/archive/%{commit_tini}/tini-%{shortcommit_tini}.tar.gz
 Source31: %{git_libnetwork}/archive/%{commit_libnetwork}/libnetwork-%{shortcommit_libnetwork}.tar.gz
 Source32: seccomp.json
+# https://bugzilla.redhat.com/show_bug.cgi?id=1636244
+Patch0: https://github.com/projectatomic/containerd/pull/11/commits/97eff6cf6c9b58f8239b28be2f080e23c9da62c0.patch
+# https://bugzilla.redhat.com/show_bug.cgi?id=1653292
+Patch1: https://github.com/projectatomic/containerd/pull/12/commits/f9a2eeb64054e740fb1ae3048dde153c257113c8.patch
+Patch2: https://github.com/projectatomic/containerd/pull/12/commits/69518f0bbdb1f11113f46a4d794e09e2f21f5e91.patch
+# https://bugzilla.redhat.com/show_bug.cgi?id=1732626
+Patch3: https://github.com/projectatomic/docker/pull/363/commits/6eadd954e5a02f2dcf93928484d42f86b6975618.patch
 BuildRequires: cmake
 BuildRequires: sed
 BuildRequires: git
@@ -311,6 +318,13 @@ tar zxf %{SOURCE30}
 
 # untar libnetwork
 tar zxf %{SOURCE31}
+
+cd containerd*
+%patch0 -p1
+%patch1 -p1
+%patch2 -p1
+cd -
+%patch3 -p1
 
 %build
 # compile docker-proxy first - otherwise deps in gopath conflict with the others below and this fails. Remove libnetwork libs then.
@@ -741,6 +755,24 @@ fi
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
+* Fri Dec 13 2019 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-108.git4ef4b30
+- bump release to not to clash with RHEL7.8
+
+* Fri Dec 13 2019 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-107.git4ef4b30
+- revert fix for #1766665 as RHEL 7 systemd does not have the CollectMode
+  property
+
+* Thu Dec 05 2019 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-106.git4ef4b30
+- fix "libcontainerd: failed to receive event from containerd:" error (#1636244)
+- fix "Pods stuck in terminating state with rpc error: code = 2" (#1653292)
+- fix "Docker panics when performing `docker search` due to potential
+  Search bug when using multiple registries" (#1732626)
+- fix race condition in kubelet cgroup destroy process (#1766665)
+
+* Thu Nov 21 2019 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-105.git4ef4b30
+- update runc
+- Resolves: #1718441
+
 * Tue Sep 24 2019 Lokesh Mandvekar <lsm5@redhat.com> - 2:1.13.1-104.git4ef4b30
 - Resolves: #1653292, #1741718, #1739315, #1733941
 - built docker @projectatomic/docker-1.13.1-rhel commit 4ef4b30
