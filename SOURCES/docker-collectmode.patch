@@ -1,0 +1,12 @@
+diff -up docker-cccb291d3613ade11e2c0b82541452e9db87b835/runc-66aedde759f33c190954815fb765eedc1d782dd9/libcontainer/cgroups/systemd/apply_systemd.go.collectmode docker-cccb291d3613ade11e2c0b82541452e9db87b835/runc-66aedde759f33c190954815fb765eedc1d782dd9/libcontainer/cgroups/systemd/apply_systemd.go
+--- docker-cccb291d3613ade11e2c0b82541452e9db87b835/runc-66aedde759f33c190954815fb765eedc1d782dd9/libcontainer/cgroups/systemd/apply_systemd.go.collectmode	2020-01-23 17:04:43.761004295 +0100
++++ docker-cccb291d3613ade11e2c0b82541452e9db87b835/runc-66aedde759f33c190954815fb765eedc1d782dd9/libcontainer/cgroups/systemd/apply_systemd.go	2020-01-23 17:04:55.584168909 +0100
+@@ -130,8 +130,6 @@ func (m *Manager) Apply(pid int) error {
+ 		properties = append(properties, newProp("PIDs", []uint32{uint32(pid)}))
+ 	}
+ 
+-	properties = append(properties, newProp("CollectMode", "inactive-or-failed"))
+-
+ 	// This is only supported on systemd versions 218 and above.
+ 	properties = append(properties, newProp("Delegate", true))
+ 

@@ -1,0 +1,25 @@
+From 44f6033c48968945353109af69114b5d0a1700de Mon Sep 17 00:00:00 2001
+From: Jhon Honce <jhonce@redhat.com>
+Date: Fri, 11 Oct 2019 16:08:59 -0700
+Subject: [PATCH] Check for both nil and zero length
+
+Signed-off-by: Jhon Honce <jhonce@redhat.com>
+---
+ libcontainer/generic_error.go | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/libcontainer/generic_error.go b/libcontainer/generic_error.go
+index de37715c..0f90369b 100644
+--- a/runc-66aedde759f33c190954815fb765eedc1d782dd9/libcontainer/generic_error.go
++++ b/runc-66aedde759f33c190954815fb765eedc1d782dd9/libcontainer/generic_error.go
+@@ -93,6 +93,10 @@ func (e *genericError) Error() string {
+ 	if e.Cause == "" {
+ 		return e.Message
+ 	}
++
++	if len(e.Stack.Frames) == 0 {
++		return fmt.Sprintf("<unknown>:<unknown>: %s caused %q", e.Cause, e.Message)
++	}
+ 	frame := e.Stack.Frames[0]
+ 	return fmt.Sprintf("%s:%d: %s caused %q", frame.File, frame.Line, e.Cause, e.Message)
+ }

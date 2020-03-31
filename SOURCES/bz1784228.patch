@@ -1,0 +1,22 @@
+diff -up docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/profiles/seccomp/default.json.bz1784228 docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/profiles/seccomp/default.json
+--- docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/profiles/seccomp/default.json.bz1784228	2019-12-20 11:36:58.836002843 +0100
++++ docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/profiles/seccomp/default.json	2019-12-20 11:10:34.359173999 +0100
+@@ -320,6 +320,7 @@
+ 				"stat64",
+ 				"statfs",
+ 				"statfs64",
++				"statx",
+ 				"symlink",
+ 				"symlinkat",
+ 				"sync",
+diff -up docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/profiles/seccomp/seccomp_default.go.bz1784228 docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/profiles/seccomp/seccomp_default.go
+--- docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/profiles/seccomp/seccomp_default.go.bz1784228	2019-12-20 11:37:11.606115942 +0100
++++ docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/profiles/seccomp/seccomp_default.go	2019-12-20 11:37:25.891242460 +0100
+@@ -314,6 +314,7 @@ func DefaultProfile() *types.Seccomp {
+ 				"stat64",
+ 				"statfs",
+ 				"statfs64",
++				"statx",
+ 				"symlink",
+ 				"symlinkat",
+ 				"sync",

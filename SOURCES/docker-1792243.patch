@@ -1,0 +1,12 @@
+diff -up ./docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/vendor/github.com/mtrmac/gpgme/gpgme.go.1792243 ./docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/vendor/github.com/mtrmac/gpgme/gpgme.go
+--- docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/vendor/github.com/mtrmac/gpgme/gpgme.go.1792243	2020-01-20 14:14:02.247121178 +0100
++++ docker-4ef4b30c57f05be26c9387ef0828e86c2ed543b8/vendor/github.com/mtrmac/gpgme/gpgme.go	2020-01-20 14:14:02.249121198 +0100
+@@ -1,7 +1,7 @@
+ // Package gpgme provides a Go wrapper for the GPGME library
+ package gpgme
+ 
+-// #cgo LDFLAGS: -lgpgme -lassuan -lgpg-error
++// #cgo LDFLAGS: -lgpgme-pthread -lassuan -lgpg-error
+ // #cgo CPPFLAGS: -D_FILE_OFFSET_BITS=64
+ // #include <stdlib.h>
+ // #include <gpgme.h>
