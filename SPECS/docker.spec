@@ -23,7 +23,7 @@
 
 # docker
 %global git_docker https://github.com/projectatomic/docker
-%global commit_docker 64e9980da375aae15b467ec980bce898541fd356
+%global commit_docker 0be3e217c42ecf554bf5117bec9c832bd3f3b6fd
 %global shortcommit_docker %(c=%{commit_docker}; echo ${c:0:7})
 # docker_branch used in %%check
 %global docker_branch %{name}-%{version}
@@ -45,9 +45,9 @@
 %global shortcommit_novolume %(c=%{commit_novolume}; echo ${c:0:7})
 
 # rhel-push-plugin
-#%global git_rhel_push https://github.com/projectatomic/rhel-push-plugin
-#%global commit_rhel_push af9107b2aedb235338e32a3c19507cad3f218b0d
-#%global shortcommit_rhel_push %(c=%{commit_rhel_push}; echo ${c:0:7})
+%global git_rhel_push https://github.com/projectatomic/rhel-push-plugin
+%global commit_rhel_push af9107b2aedb235338e32a3c19507cad3f218b0d
+%global shortcommit_rhel_push %(c=%{commit_rhel_push}; echo ${c:0:7})
 
 # docker-lvm-plugin
 %global git_lvm https://github.com/projectatomic/%{repo}-lvm-plugin
@@ -77,15 +77,15 @@
 Name: %{repo}
 Epoch: 2
 Version: 1.13.1
-Release: 162.git%{shortcommit_docker}%{?dist}
+Release: 203.git%{shortcommit_docker}%{?dist}
 Summary: Automates deployment of containerized applications
 License: ASL 2.0
 URL: https://%{import_path}
-ExclusiveArch: aarch64 %{arm} ppc64le s390x x86_64 %{ix86}
+ExclusiveArch: aarch64 %{arm} ppc64le s390x x86_64
 Source0: %{git_docker}/archive/%{commit_docker}.tar.gz
 Source2: %{git_dss}/archive/%{commit_dss}/container-storage-setup-%{shortcommit_dss}.tar.gz
 Source4: %{git_novolume}/archive/%{commit_novolume}/%{repo}-novolume-plugin-%{shortcommit_novolume}.tar.gz
-#Source5: %{git_rhel_push}/archive/%{commit_rhel_push}/rhel-push-plugin-%{shortcommit_rhel_push}.tar.gz
+Source5: %{git_rhel_push}/archive/%{commit_rhel_push}/rhel-push-plugin-%{shortcommit_rhel_push}.tar.gz
 Source6: %{git_lvm}/archive/%{commit_lvm}/%{repo}-lvm-plugin-%{shortcommit_lvm}.tar.gz
 Source8: %{name}.service
 Source9: %{name}.sysconfig
@@ -123,17 +123,14 @@ Patch5: docker-1792243.patch
 Patch6: https://patch-diff.githubusercontent.com/raw/projectatomic/runc/pull/30.patch
 # https://patch-diff.githubusercontent.com/raw/projectatomic/docker/pull/369.patch
 Patch7: docker-CVE-2020-8945.patch
-# related bug: https://bugzilla.redhat.com/show_bug.cgi?id=1734482
-# patch:       https://github.com/projectatomic/docker/pull/370.patch
-#Patch8: docker-1734482.patch
-# related bug: https://bugzilla.redhat.com/show_bug.cgi?id=1804024
-# patch: https://patch-diff.githubusercontent.com/raw/projectatomic/docker/pull/371.patch
-Patch9: docker-1804024.patch
+# related bug: https://bugzilla.redhat.com/show_bug.cgi?id=1879425
+# patch:       https://github.com/projectatomic/runc/pull/33.patch
+Patch8: docker-1879425.patch
 BuildRequires: cmake
 BuildRequires: sed
 BuildRequires: git
 BuildRequires: glibc-static
-%if 0%{?fedora}
+%if 0%{?fedora} || 0%{?centos}
 BuildRequires: %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
 %else
 BuildRequires: go-toolset-1.10
@@ -207,7 +204,7 @@ Requires: device-mapper-libs >= 7:1.02.97
 Requires: oci-umount >= 2:2.3.3-3
 Requires: oci-register-machine >= 1:0-5.13
 Requires: oci-systemd-hook >= 1:0.1.4-9
-#Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
+Requires: %{name}-rhel-push-plugin = %{epoch}:%{version}-%{release}
 Requires: xz
 Requires: atomic-registries
 Requires: container-selinux >= 2:2.51-1
@@ -259,16 +256,16 @@ local volumes defined. In particular, the plugin will block `docker run` with:
 
 The only thing allowed will be just bind mounts.
 
-#%package rhel-push-plugin
-#License: GPLv2
-#Summary: Avoids pushing a RHEL-based image to docker.io registry
+%package rhel-push-plugin
+License: GPLv2
+Summary: Avoids pushing a RHEL-based image to docker.io registry
 
-#%description rhel-push-plugin
-#In order to use this plugin you must be running at least Docker 1.10 which
-#has support for authorization plugins.
+%description rhel-push-plugin
+In order to use this plugin you must be running at least Docker 1.10 which
+has support for authorization plugins.
 
-#This plugin avoids any RHEL based image to be pushed to the default docker.io
-#registry preventing users to violate the RH subscription agreement.
+This plugin avoids any RHEL based image to be pushed to the default docker.io
+registry preventing users to violate the RH subscription agreement.
 
 %package lvm-plugin
 License: LGPLv3
@@ -293,7 +290,7 @@ tar zxf %{SOURCE2}
 tar zxf %{SOURCE4}
 
 # untar rhel-push-plugin
-#tar zxf %{SOURCE5}
+tar zxf %{SOURCE5}
 
 # untar lvm-plugin
 tar zxf %{SOURCE6}
@@ -343,9 +340,8 @@ cd -
 %patch6 -p1
 %patch7 -p1
 
-# https://bugzilla.redhat.com/show_bug.cgi?id=1734482
-#%patch8 -p1
-%patch9 -p1
+# https://bugzilla.redhat.com/show_bug.cgi?id=1879425
+%patch8 -p1
 
 %build
 # compile docker-proxy first - otherwise deps in gopath conflict with the others below and this fails. Remove libnetwork libs then.
@@ -367,7 +363,7 @@ pushd _build
   mkdir -p src/%{provider}.%{provider_tld}/{%{name},projectatomic}
   ln -s $(dirs +1 -l) src/%{import_path}
   ln -s $(dirs +1 -l)/%{repo}-novolume-plugin-%{commit_novolume} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
-#  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit_rhel_push} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+  ln -s $(dirs +1 -l)/rhel-push-plugin-%{commit_rhel_push} src/%{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
   ln -s $(dirs +1 -l)/%{repo}-lvm-plugin-%{commit_lvm} src/%{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
@@ -376,10 +372,10 @@ pushd $(pwd)/_build/src
 %gobuild %{provider}.%{provider_tld}/projectatomic/%{repo}-novolume-plugin
 popd
 
-#export GOPATH=$(pwd)/rhel-push-plugin-%{commit_rhel_push}/Godeps/_workspace:$(pwd)/_build
-#pushd $(pwd)/_build/src
-#%gobuild %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
-#popd
+export GOPATH=$(pwd)/rhel-push-plugin-%{commit_rhel_push}/Godeps/_workspace:$(pwd)/_build
+pushd $(pwd)/_build/src
+%gobuild %{provider}.%{provider_tld}/projectatomic/rhel-push-plugin
+popd
 
 export GOPATH=$(pwd)/%{repo}-lvm-plugin-%{commit_lvm}/Godeps/_workspace:$(pwd)/_build
 pushd $(pwd)/_build/src
@@ -402,7 +398,7 @@ export GOPATH=$(pwd)/_build:$(pwd)/vendor
 # build %%{name} manpages
 man/md2man-all.sh
 go-md2man -in %{repo}-novolume-plugin-%{commit_novolume}/man/%{repo}-novolume-plugin.8.md -out %{repo}-novolume-plugin.8
-#go-md2man -in rhel-push-plugin-%{commit_rhel_push}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
+go-md2man -in rhel-push-plugin-%{commit_rhel_push}/man/rhel-push-plugin.8.md -out rhel-push-plugin.8
 go-md2man -in %{repo}-lvm-plugin-%{commit_lvm}/man/%{repo}-lvm-plugin.8.md -out %{repo}-lvm-plugin.8
 
 # build %%{name} binary
@@ -567,12 +563,12 @@ install -d %{buildroot}%{_mandir}/man8
 install -p -m 644 %{repo}-novolume-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install rhel-push-plugin executable, unitfile, socket and man
-#install -d %{buildroot}%{_libexecdir}/%{repo}
-#install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
-#install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
-#install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
-#install -d %{buildroot}%{_mandir}/man8
-#install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
+install -d %{buildroot}%{_libexecdir}/%{repo}
+install -p -m 755 _build/src/rhel-push-plugin %{buildroot}%{_libexecdir}/%{repo}/rhel-push-plugin
+install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.service %{buildroot}%{_unitdir}/rhel-push-plugin.service
+install -p -m 644 rhel-push-plugin-%{commit_rhel_push}/systemd/rhel-push-plugin.socket %{buildroot}%{_unitdir}/rhel-push-plugin.socket
+install -d %{buildroot}%{_mandir}/man8
+install -p -m 644 rhel-push-plugin.8 %{buildroot}%{_mandir}/man8
 
 # install %%{repo}-lvm-plugin executable, unitfile, socket and man
 install -d %{buildroot}/%{_libexecdir}/%{repo}
@@ -652,14 +648,14 @@ exit 0
 %postun novolume-plugin
 %systemd_postun_with_restart %{name}-novolume-plugin.service
 
-#%post rhel-push-plugin
-#%systemd_post rhel-push-plugin.service
+%post rhel-push-plugin
+%systemd_post rhel-push-plugin.service
 
-#%preun rhel-push-plugin
-#%systemd_preun rhel-push-plugin.service
+%preun rhel-push-plugin
+%systemd_preun rhel-push-plugin.service
 
-#%postun rhel-push-plugin
-#%systemd_postun_with_restart rhel-push-plugin.service
+%postun rhel-push-plugin
+%systemd_postun_with_restart rhel-push-plugin.service
 
 %posttrans
 # Install a default docker-storage-setup based on kernel version.
@@ -755,12 +751,12 @@ fi
 %{_libexecdir}/%{repo}/%{repo}-novolume-plugin
 %{_unitdir}/%{repo}-novolume-plugin.*
 
-#%files rhel-push-plugin
-#%license rhel-push-plugin-%{commit_rhel_push}/LICENSE
-#%doc rhel-push-plugin-%{commit_rhel_push}/README.md
-#%{_mandir}/man8/rhel-push-plugin.8.gz
-#%{_libexecdir}/%{repo}/rhel-push-plugin
-#%{_unitdir}/rhel-push-plugin.*
+%files rhel-push-plugin
+%license rhel-push-plugin-%{commit_rhel_push}/LICENSE
+%doc rhel-push-plugin-%{commit_rhel_push}/README.md
+%{_mandir}/man8/rhel-push-plugin.8.gz
+%{_libexecdir}/%{repo}/rhel-push-plugin
+%{_unitdir}/rhel-push-plugin.*
 
 %files lvm-plugin
 %license %{repo}-lvm-plugin-%{commit_lvm}/LICENSE
@@ -776,8 +772,25 @@ fi
 %{_bindir}/%{name}-v1.10-migrator-*
 
 %changelog
-* Mon Jun 22 2020 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-162.git64e9980
+* Tue Oct 27 2020 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-203.git0be3e21
+- do not enable CollectMode support yet because it is not still present in
+  7.6-ALT
+- Related: #1766665
+
+* Tue Sep 29 2020 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-202.git0be3e21
+- fix "runc run: fix panic on failed init start"
+- Resolves: #1879425
+
+* Tue Sep 22 2020 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-201.git0be3e21
+- fix "Race condition in kubelet cgroup destroy process"
+- Resolves: #1766665
+
+* Mon Jun 22 2020 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-200.git0be3e21
 - rebuilt
+
+* Wed Jun 10 2020 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-162.git0be3e21
+- update docker to 0be3e21: fixes "dockerd leaks SELinux MCS labels"
+- Resolves: #1734482
 
 * Tue Mar 03 2020 Jindrich Novy <jnovy@redhat.com> - 2:1.13.1-161.git64e9980
 - make failure message for CVE-2020-1702 more obvious (#1804024)
