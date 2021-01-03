@@ -22,57 +22,57 @@
 %define gobuild(o:) go build -buildmode pie -compiler gc -tags="rpm_crashtraceback ${BUILDTAGS:-}" -ldflags "${GO_LDFLAGS:-} ${LDFLAGS:-} -B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \\n') -extldflags '-Wl,-z,relro -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld'" -a -v -x %{?**};
 
 # docker
-%global git_docker https://github.com/projectatomic/docker
-%global commit_docker 0be3e217c42ecf554bf5117bec9c832bd3f3b6fd
-%global shortcommit_docker %(c=%{commit_docker}; echo ${c:0:7})
+%global git_docker https://github.com/likan999/ppa-docker
+%global commit_docker 619aae98a6124488dfb7fcbb7aeccf67720849ad
+%global shortcommit_docker 619aae9
 # docker_branch used in %%check
 %global docker_branch %{name}-%{version}
 
 # d-s-s
 %global git_dss https://github.com/projectatomic/container-storage-setup
 %global commit_dss 413b4080c0b9346a242d88137bb3e9e0a6aa25f9
-%global shortcommit_dss %(c=%{commit_dss}; echo ${c:0:7})
+%global shortcommit_dss 413b408
 %global dss_libdir %{_exec_prefix}/lib/%{name}-storage-setup
 
 # v1.10-migrator
 %global git_migrator https://github.com/%{repo}/v1.10-migrator
 %global commit_migrator c417a6a022c5023c111662e8280f885f6ac259be
-%global shortcommit_migrator %(c=%{commit_migrator}; echo ${c:0:7})
+%global shortcommit_migrator c417a6a
 
 # docker-novolume-plugin
 %global git_novolume https://github.com/projectatomic/%{repo}-novolume-plugin
 %global commit_novolume 385ec70baac3ef356f868f391c8d7818140fbd44
-%global shortcommit_novolume %(c=%{commit_novolume}; echo ${c:0:7})
+%global shortcommit_novolume 385ec70
 
 # rhel-push-plugin
 %global git_rhel_push https://github.com/projectatomic/rhel-push-plugin
 %global commit_rhel_push af9107b2aedb235338e32a3c19507cad3f218b0d
-%global shortcommit_rhel_push %(c=%{commit_rhel_push}; echo ${c:0:7})
+%global shortcommit_rhel_push af9107b
 
 # docker-lvm-plugin
 %global git_lvm https://github.com/projectatomic/%{repo}-lvm-plugin
 %global commit_lvm 20a1f68da4daecd1f7f59c5b794dd25c2f50ba02
-%global shortcommit_lvm %(c=%{commit_lvm}; echo ${c:0:7})
+%global shortcommit_lvm 20a1f68
 
 # docker-runc
-%global git_runc https://github.com/projectatomic/runc
-%global commit_runc 66aedde759f33c190954815fb765eedc1d782dd9
-%global shortcommit_runc %(c=%{commit_runc}; echo ${c:0:7})
+%global git_runc https://github.com/likan999/ppa-docker
+%global commit_runc 038f5c49f02b090c22faaa57926c307d50e668a7
+%global shortcommit_runc 038f5c4
 
 # docker-containerd
-%global git_containerd https://github.com/projectatomic/containerd
-%global commit_containerd 9c53e35c39f214b128beed3dfb670ccf751c4173
-%global shortcommit_containerd %(c=%{commit_containerd}; echo ${c:0:7})
+%global git_containerd https://github.com/likan999/ppa-docker
+%global commit_containerd 417392f93ec3ac4103a04fd5159776938206e609
+%global shortcommit_containerd 417392f
 
 # docker-init
 %global git_tini https://github.com/krallin/tini
 %global commit_tini fec3683b971d9c3ef73f284f176672c44b448662
-%global shortcommit_tini %(c=%{commit_tini}; echo ${c:0:7})
+%global shortcommit_tini fec3683
 
 # docker-proxy
 %global git_libnetwork https://github.com/docker/libnetwork
 %global commit_libnetwork c5d66a04ae80cd8fa2465ea99c0b2b1a6840cb93
-%global shortcommit_libnetwork %(c=%{commit_libnetwork}; echo ${c:0:7})
+%global shortcommit_libnetwork c5d66a0
 
 Name: %{repo}
 Epoch: 2
@@ -109,23 +109,13 @@ Source29: 99-docker.conf
 Source30: %{git_tini}/archive/%{commit_tini}/tini-%{shortcommit_tini}.tar.gz
 Source31: %{git_libnetwork}/archive/%{commit_libnetwork}/libnetwork-%{shortcommit_libnetwork}.tar.gz
 Source32: seccomp.json
-# https://bugzilla.redhat.com/show_bug.cgi?id=1636244
-Patch0: https://github.com/projectatomic/containerd/pull/11/commits/97eff6cf6c9b58f8239b28be2f080e23c9da62c0.patch
-# https://bugzilla.redhat.com/show_bug.cgi?id=1653292
-Patch1: https://github.com/projectatomic/containerd/pull/12/commits/f9a2eeb64054e740fb1ae3048dde153c257113c8.patch
-Patch2: https://github.com/projectatomic/containerd/pull/12/commits/69518f0bbdb1f11113f46a4d794e09e2f21f5e91.patch
 # related: https://bugzilla.redhat.com/show_bug.cgi?id=1766665 there is no CollectMode property in RHEL7 systemd
 Patch3: docker-collectmode.patch
 # https://bugzilla.redhat.com/show_bug.cgi?id=1784228
 Patch4: bz1784228.patch
 Patch5: docker-1792243.patch
-# https://bugzilla.redhat.com/show_bug.cgi?id=1718441
-Patch6: https://patch-diff.githubusercontent.com/raw/projectatomic/runc/pull/30.patch
 # https://patch-diff.githubusercontent.com/raw/projectatomic/docker/pull/369.patch
 Patch7: docker-CVE-2020-8945.patch
-# related bug: https://bugzilla.redhat.com/show_bug.cgi?id=1879425
-# patch:       https://github.com/projectatomic/runc/pull/33.patch
-Patch8: docker-1879425.patch
 BuildRequires: cmake
 BuildRequires: sed
 BuildRequires: git
@@ -281,7 +271,7 @@ then be bind mounted into the container using `docker run` command.
 %{?enable_gotoolset110}
 
 %prep
-%setup -q -n %{name}-%{commit_docker}
+%setup -q -n ppa-docker-%{commit_docker}
 
 # untar d-s-s
 tar zxf %{SOURCE2}
@@ -329,19 +319,10 @@ tar zxf %{SOURCE30}
 # untar libnetwork
 tar zxf %{SOURCE31}
 
-cd containerd*
-%patch0 -p1
-%patch1 -p1
-%patch2 -p1
-cd -
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
-%patch6 -p1
 %patch7 -p1
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=1879425
-%patch8 -p1
 
 %build
 # compile docker-proxy first - otherwise deps in gopath conflict with the others below and this fails. Remove libnetwork libs then.
@@ -382,7 +363,7 @@ pushd $(pwd)/_build/src
 %gobuild %{provider}.%{provider_tld}/projectatomic/%{repo}-lvm-plugin
 popd
 
-pushd containerd-%{commit_containerd}
+pushd ppa-docker-%{commit_containerd}
 mkdir -p vendor/src/%(dirname github.com/docker/containerd)
 ln -s ../../../.. vendor/src/github.com/docker/containerd
 export GOPATH=$(pwd)/vendor
@@ -414,7 +395,7 @@ make v1.10-migrator-local
 popd
 
 # build %%{repo}-runc
-pushd runc-%{commit_runc}
+pushd ppa-docker-%{commit_runc}
 export RUNC_VERSION=$(cat ./VERSION)
 mkdir -p GOPATH
 pushd GOPATH
@@ -588,12 +569,12 @@ install -p -m 700 %{SOURCE18} %{buildroot}%{_bindir}/%{name}-v1.10-migrator-help
 
 # install docker-runc
 install -d %{buildroot}%{_libexecdir}/%{repo}
-install -p -m 755 runc-%{commit_runc}/runc %{buildroot}%{_libexecdir}/%{repo}/%{repo}-runc-current
+install -p -m 755 ppa-docker-%{commit_runc}/runc %{buildroot}%{_libexecdir}/%{repo}/%{repo}-runc-current
 
 #install docker-containerd
-install -p -m 755 containerd-%{commit_containerd}/bin/containerd %{buildroot}%{_bindir}/%{repo}-containerd-current
-install -p -m 755 containerd-%{commit_containerd}/bin/containerd-shim %{buildroot}%{_bindir}/%{repo}-containerd-shim-current
-install -p -m 755 containerd-%{commit_containerd}/bin/ctr %{buildroot}%{_bindir}/%{repo}-ctr-current
+install -p -m 755 ppa-docker-%{commit_containerd}/bin/containerd %{buildroot}%{_bindir}/%{repo}-containerd-current
+install -p -m 755 ppa-docker-%{commit_containerd}/bin/containerd-shim %{buildroot}%{_bindir}/%{repo}-containerd-shim-current
+install -p -m 755 ppa-docker-%{commit_containerd}/bin/ctr %{buildroot}%{_bindir}/%{repo}-ctr-current
 
 #install sysctl knob
 install -d -p %{buildroot}%{_usr}/lib/sysctl.d
