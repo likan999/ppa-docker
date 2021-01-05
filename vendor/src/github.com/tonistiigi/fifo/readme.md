@@ -20,7 +20,7 @@ func OpenFifo(ctx context.Context, fn string, flag int, perm os.FileMode) (io.Re
 func (f *fifo) Read(b []byte) (int, error)
 
 
-// Write from byte array to a fifo.
+// Write from byte array to a buffer.
 func (f *fifo) Write(b []byte) (int, error)
 
 
